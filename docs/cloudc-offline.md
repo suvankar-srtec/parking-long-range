@@ -1,23 +1,13 @@
-# Cloud C offline verification
-
-HTTP remains the configured online protocol. The SDK does not document automatic HTTP-to-TCP failover. Internet outage verification uses controller memory; controller and readers must remain powered.
-
-## Enable
-
-Sign in as Super Admin. Assign A to Entry and B to Exit in the same enabled building. Open Device / Reader, then **Offline memory** on input A. Reserve an unused card index range (0-59999, up to 1000 slots) and an unused timezone index (0-15) in the controller. Confirm they are unused: the app writes those slots and that timezone. Do not reuse them in vendor software. The range cannot be changed after initialization. Enter the controller clock offset accurately: NTP timezone 0 means UTC (0 minutes); India is 330 minutes.
-
-Click Enable / retry sync. Wait until pending commands reach zero, no error is shown, and the controller acknowledges commands. Set controller Access Check to Online first. Test a registered card while online, then temporarily disconnect internet (keep power and the reader wiring connected), test locally, reconnect and confirm history upload. A successful queued command is not proof of physical gate movement; test the hardware.
-
-## Behavior
-
-Only numeric 32-bit RFID cards from enabled building/company records and non-placeholder employees are stored. Blocked cards are excluded. Visitors and QR credentials retain their existing online workflow. Commands use the SDK C1 add/update, 15 delete and 0D timezone frames. No clear-all command is sent. Controller memory is shared by A/B, so offline registration or swapped physical directions are not enabled. Changing the roles, building or disabling access queues app-card removal on the next permission check.
-
-Card permissions are checked at most once per minute on heartbeats, renewed hourly, and expire after 24 hours without renewal. Commands are persisted and retried using IndexCmd/CmdOK, and failed acknowledgements stop the queue until retried. Disabling sync queues removal only for slots the app has managed. Wait for acknowledgement: a disconnected controller still has its last stored permissions until deletion or expiry. Any cards already stored manually remain governed by the controller's own configuration.
-
-While offline, current cloud blocks, live occupancy/capacity and app anti-passback cannot be enforced. Do not promise these rules from the memory whitelist. Controller clock accuracy and vendor offline mode settings must be verified on the device.
-
-Card/alarm history is saved durably and deduplicated before returning IndexEvent/IndexAlarm. Activity shows HISTORY records and retains EventType and raw packet (without token) in cloudc_history. History is never replayed through live authorization and does not change parking counts: the supplied SDK does not establish firmware-specific EventType meanings. Occupancy reconciliation remains a separate task once those meanings and sample packets are confirmed.
-
-## Deployment
-
-The existing build runs prisma db push and generates the new models. No additional secret is required; existing RFID_HTTP_TOKEN authenticates controller requests. Offline sync defaults to disabled. Existing QR and online Cloud C routes remain active.
+# Cloud C automatic offline verification
+
+A powered Cloud C controller configured with Access Check = Online first automatically uses its existing stored card permissions when the online server cannot be reached. This is controller firmware behavior, not an HTTP-to-TCP switch, and does not depend on a website request succeeding.
+
+The memory is shared by reader inputs A and B. The website shows one controller-level explanation to Super Admin; there are no card-slot, timezone, capacity or enable fields in this flow. Online reader purposes remain configurable as before. Offline decisions follow the controller's own saved configuration, which must be tested when physical input purposes are changed.
+
+Only cards already present in controller memory can be verified offline. This UI change does not automatically copy cards registered on the website to the controller. Existing controller cards are not cleared or overwritten by the informational panel. Unknown cards cannot be verified from the website while the controller is disconnected. A powered-off controller cannot verify any cards.
+
+Current website card blocks, parking capacity and live occupancy cannot be checked while disconnected. Reconnecting uploads controller card/alarm history, which is durably saved and deduplicated before acknowledgement. History is not replayed as a fresh authorization and does not automatically reconcile parking occupancy.
+
+To test: verify a stored card while connected, disconnect internet while retaining power and reader wiring, scan that card, then reconnect and inspect uploaded history. Confirm controller Offline/Online settings and actual relay behavior on the hardware. Existing QR functionality and online Cloud C authorization remain available.
+
+The earlier opt-in memory-command backend is retained for compatibility with any previously configured installation; its reserved-memory configuration is not automatically enabled or changed by this UI. It is separate from the controller's native offline verification.

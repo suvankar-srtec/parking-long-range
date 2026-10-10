@@ -280,11 +280,15 @@ export default function ReaderConsole({ compact = false }: { compact?: boolean }
               {(data.canConfigureReaders || (data.canAssignReaders && reader.readerProtocol === "CLOUD_C")) ? <button className="secondary-button" onClick={() => openConfigure(reader)}>Configure purpose</button> : null}
               {data.canRemoveReaders ? <button className="secondary-button" disabled={pending} onClick={() => removeReader(reader)}>Remove reader</button> : null}
             </div>}
-            {data.canAssignReaders && reader.readerProtocol === "CLOUD_C" && reader.deviceNumber.endsWith("-A") && <CloudCOfflineSettings serial={reader.deviceNumber.slice(0, -2)} />}
           </article>;
         })}
       </div>}
     </section>
+
+    {data?.canAssignReaders && [...new Set(data.readers
+      .filter(reader => reader.readerProtocol === "CLOUD_C" && /-[AB]$/.test(reader.deviceNumber))
+      .map(reader => reader.deviceNumber.slice(0, -2)))].map(serial =>
+        <CloudCOfflineSettings key={serial} serial={serial} />)}
 
     {showAvailable && <div className="modal-backdrop reader-modal-backdrop">
       <section className="modal-card reader-selector-modal" role="dialog" aria-modal="true" aria-label="Add RFID reader">
