@@ -31,12 +31,10 @@ export default function CloudCOfflineHistory({ controllers }: { controllers: str
     const timer = setInterval(() => { if (!document.hidden) void load(); }, 10_000);
     return () => { controller.abort(); if (timer) clearInterval(timer); };
   }, [serial, refresh]);
-  // Persisted history has completed its upload and must leave this pending view.
-  // Unsent controller records cannot be queried while the controller is offline.
-  const pendingRecords = data?.records.filter(row => !row.receivedAt) ?? [];
-  return <section className="portfolio-card" aria-label="Pending controller records">
+  const records = data?.records ?? [];
+  return <section className="portfolio-card" aria-label="Uploaded controller records">
     <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 18 }}>
-      <h2 style={{ margin: 0, marginRight: "auto" }}>Pending records</h2>
+      <h2 style={{ margin: 0, marginRight: "auto" }}>Uploaded records</h2>
       <label>Controller <select value={serial} onChange={e => setSerial(e.target.value)}>
         <option value="">All controllers</option>
         {controllers.map(value => <option key={value} value={value}>{value}</option>)}
@@ -49,13 +47,13 @@ export default function CloudCOfflineHistory({ controllers }: { controllers: str
         <thead><tr>{["Scan time", "Controller", "Reader", "Card", "Type", "Event code"].map(title =>
           <th key={title} scope="col" style={{ padding: "12px 10px", background: "#eef5fa", borderBottom: "1px solid #dbe5ed" }}>{title}</th>
         )}</tr></thead>
-        <tbody>{pendingRecords.map(row => <tr key={row.id}>
+        <tbody>{records.map(row => <tr key={row.id}>
           <td>{row.scanTime || "Unknown"}</td><td>{row.serial}</td>
           <td>{row.reader === "0" ? "A / IN" : row.reader === "1" ? "B / OUT" : row.reader || "-"}</td>
           <td>{row.card || "-"}</td><td>{row.kind}</td><td>{row.eventType || "-"}</td>
         </tr>)}
-        {!pendingRecords.length && <tr><td colSpan={6} style={{ padding: "20px 10px", color: "#64748b" }} role="status">
-          {loading ? "Loading..." : error ? "Records unavailable." : "Uploaded records cleared. Unsent scans remain on the controller until it reconnects."}
+        {!records.length && <tr><td colSpan={6} style={{ padding: "20px 10px", color: "#64748b" }} role="status">
+          {loading ? "Loading..." : error ? "Records unavailable." : "No records uploaded yet."}
         </td></tr>}
         </tbody>
       </table>
