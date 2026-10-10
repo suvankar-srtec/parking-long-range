@@ -22,7 +22,14 @@ export async function handleCloudHttp(request: Request, heartbeat: boolean) {
     if (heartbeat && !/^\d{1,10}$/.test(packet.Key || "")) return respond({ AcsRes: "0" }, 400);
     const reportedIp = isIP(packet.IP || "") === 4 ? { readerIp: packet.IP } : {};
     stage = "save-reader";
-    await prisma.$transaction(async (tx) => {
+    const inputDevices = [cloudInputDevice(packet.Serial, "0"), cloudInputDevice(packet.Serial, "1")];
+    // Routine heartbeats need one update, not the global access/enrollment lock.
+    const contact = await prisma.rfidReader.updateMany({
+      where: { deviceNumber: { in: inputDevices }, readerProtocol: "CLOUD_C" },
+      data: { lastSeenAt: new Date(), connectionType: "HTTP", tcpConnected: false,
+        heartbeatSeconds: 5, ...reportedIp },
+    });
+    if (contact.count !== 2) await prisma.$transaction(async (tx) => {
       await lockRfid(tx);
       const inputA = cloudInputDevice(packet.Serial, "0");
       // Rename the legacy controller row to input A, preserving its ID and links.
@@ -60,7 +67,7 @@ export async function handleCloudHttp(request: Request, heartbeat: boolean) {
     stage = "process-scan";
     const result = await processReaderScan({ deviceNumber: cloudInputDevice(packet.Serial, packet.Reader), decodedResult: packet.Card });
     return respond({ AcsRes: result.code === "0000" ? "1" : "0",
-      ActIndex: packet.Reader, Time: "1", Card: packet.Card,
+      Reader: packet.Reader, ActIndex: packet.Reader, Time: "1", Card: packet.Card,
       Note: result.code === "0000" ? "Allowed" : "Denied" });
   } catch (error) {
     const detail = error as { name?: string; code?: string; meta?: { column?: string; table?: string } };

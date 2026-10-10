@@ -103,19 +103,17 @@ export default function ReaderConsole({ compact = false }: { compact?: boolean }
 
     async function load() {
       try {
-        const response = await fetch("/api/rfid/readers", {
-          cache: "no-store",
-          signal: AbortSignal.timeout(10000),
-        });
+        const [response, activityResponse] = await Promise.all([
+          fetch("/api/rfid/readers", { cache: "no-store", signal: AbortSignal.timeout(10000) }),
+          compact ? Promise.resolve(null) : fetch("/api/rfid/events?summary=1", {
+            cache: "no-store", signal: AbortSignal.timeout(10000),
+          }),
+        ]);
         const devices = await response.json();
         if (!response.ok) throw new Error(devices.message || "Reader status unavailable.");
 
         let inside = 0;
-        if (!compact) {
-          const activityResponse = await fetch("/api/rfid/events", {
-            cache: "no-store",
-            signal: AbortSignal.timeout(10000),
-          });
+        if (activityResponse) {
           const activityData = await activityResponse.json();
           if (activityResponse.ok) inside = Number(activityData.inside || 0);
         }

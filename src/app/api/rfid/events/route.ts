@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { rfidUser, rfidApiError } from "@/lib/rfid-access";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const user = await rfidUser();
     const scope = user.role === "SUPER_ADMIN"
@@ -12,7 +12,7 @@ export async function GET() {
         : { buildingId: user.buildingId! };
 
     const [events, insideVehicles, insideVisitors] = await Promise.all([
-      prisma.rfidEvent.findMany({
+      new URL(request.url).searchParams.get("summary") === "1" ? Promise.resolve([]) : prisma.rfidEvent.findMany({
         where: scope,
         orderBy: [{ createdAt: "desc" }, { id: "desc" }],
         take: 100,
