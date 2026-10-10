@@ -14,10 +14,11 @@ test("Boundary card IDs and slot ranges fail closed", () => {
   assert.throws(() => cardCommand(1, "1", 16, now, until));
   assert.throws(() => cardCommand(1, "1", 0, now, now));
 });
-test("Timezone has a valid frame checksum and excludes passwords", () => {
+test("Timezone preserves native anti-passback and single-card identification", () => {
   const frame = Buffer.from(timezoneCommand(0,new Date("2026-10-11T13:00:00Z")), "hex");
   assert.equal(frame.reduce((a,b)=>a^b,0),3);
-  assert.equal(frame[13],1); // Single card identification.
+  assert.equal(frame[13] & 0x7f,1); // Single card identification.
+  assert.equal(frame[13] & 0x80,0x80); // Native offline anti-passback stays enabled.
 });
 test("History identities deduplicate retransmissions but keep reused indices on different dates", () => {
   const packet = {Serial:"80M236",type:"100",IndexEvent:"12",EventTime:"2026-10-10 13:00:00"};

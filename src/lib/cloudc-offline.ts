@@ -77,7 +77,7 @@ export async function planOffline(tx: Prisma.TransactionClient, serial: string, 
 
   if (cards.length > config.slotCount) throw new ParkingError("Offline card capacity exceeded; the reserved range is too small.");
 
-  const fingerprint = digest(JSON.stringify([buildingId, config.enabled, cards]));
+  const fingerprint = digest(JSON.stringify(["native-apb-v1", buildingId, config.enabled, cards]));
 
   const renew = config.enabled && (!config.plannedAt || now.getTime() - config.plannedAt.getTime() > 3600_000);
 
