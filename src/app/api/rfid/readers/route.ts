@@ -214,7 +214,7 @@ export async function POST(request: Request) {
     if (body?.action === "configureCloud") {
       const deviceNumber = String(body?.deviceNumber ?? "").trim();
       const mode = String(body?.mode ?? "");
-      if (!["REGISTER", "ENTRY_EXIT"].includes(mode)) throw new ParkingError("Select Registration or Entry / Exit.");
+      if (!["REGISTER", "ENTRY", "EXIT", "ENTRY_EXIT"].includes(mode)) throw new ParkingError("Select Registration, Entry, Exit, or Entry / Exit.");
       const result = await prisma.$transaction(async (tx) => {
         await lockRfid(tx);
         const existing = await tx.rfidReader.findUnique({ where: { deviceNumber } });

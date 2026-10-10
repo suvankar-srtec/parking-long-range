@@ -232,7 +232,7 @@ export default function GateDetailsManager({ buildings }: { buildings: BuildingG
       !visibleRows.length ? <div className="gate-empty-search"><strong>No building found</strong><span>No building matches “{search.trim()}”.</span></div> :
       <div className="gate-building-list">
         {visibleRows.map((building) => {
-          const selectableReaders = building.readers.filter((reader) => reader.enabled && reader.mode === "ENTRY_EXIT");
+          const selectableReaders = building.readers.filter((reader) => reader.enabled && ["ENTRY", "EXIT", "ENTRY_EXIT"].includes(reader.mode));
           const assignedIds = new Set(
             building.gates.flatMap((gate) => [gate.entryReaderId, gate.exitReaderId]).filter((id): id is string => Boolean(id)),
           );
@@ -258,8 +258,8 @@ export default function GateDetailsManager({ buildings }: { buildings: BuildingG
                       if (reader.id === oppositeId) return false;
                       return !assignedIds.has(reader.id);
                     });
-                    const entryOptions = availableFor(gate.entryReaderId, gate.exitReaderId);
-                    const exitOptions = availableFor(gate.exitReaderId, gate.entryReaderId);
+                    const entryOptions = availableFor(gate.entryReaderId, gate.exitReaderId).filter((reader) => reader.mode !== "EXIT");
+                    const exitOptions = availableFor(gate.exitReaderId, gate.entryReaderId).filter((reader) => reader.mode !== "ENTRY");
 
                     return <tr key={gate.gateNumber}>
                       <td><span className="gate-number">Gate {gate.gateNumber}</span></td>

@@ -21,3 +21,10 @@ export function parseCloudPacket(raw: string, url: string): Record<string, strin
   if (!/^[A-Za-z0-9_-]{1,64}$/.test(fields.Serial || "")) throw new Error("Invalid serial");
   return fields;
 }
+
+export function cloudInputDevice(serial: string, input: string) {
+  if (!/^[A-Za-z0-9_-]{1,62}$/.test(serial) || !["0", "1"].includes(input)) {
+    throw new Error("Invalid Cloud C input");
+  }
+  return `${serial}-${input === "0" ? "A" : "B"}`;
+}

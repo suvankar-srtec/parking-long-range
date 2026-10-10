@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { cloudReply, parseCloudPacket } from "../src/lib/cloudc-protocol.ts";
+import { cloudReply, parseCloudPacket, cloudInputDevice } from "../src/lib/cloudc-protocol.ts";
 test("Cloud C JSON POST and numeric fields", () => {
   assert.deepEqual(parseCloudPacket('{"Serial":"80M236","Key":123}', 'http://test/api'), {Serial:"80M236",Key:"123"});
 });
@@ -21,4 +21,11 @@ test("Padded firmware serial and optional status fields", () => {
   assert.equal(packet.Key, '123');
   assert.equal(parseCloudPacket(JSON.stringify({Serial:"80M236\u0000",Key:123}), 'http://test/api').Serial, '80M236');
   assert.throws(() => parseCloudPacket('{"Serial":null}', 'http://test/api'));
+});
+
+test("Separate controller inputs route to independent device identities", () => {
+  assert.equal(cloudInputDevice('80M236', '0'), '80M236-A');
+  assert.equal(cloudInputDevice('80M236', '1'), '80M236-B');
+  for (const input of ['', '2', '-1', 'A']) assert.throws(() => cloudInputDevice('80M236', input));
+  assert.throws(() => cloudInputDevice('invalid serial', '0'));
 });

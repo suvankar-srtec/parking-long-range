@@ -164,7 +164,7 @@ export default function ReaderConsole({ compact = false }: { compact?: boolean }
 
   function openConfigure(reader: Reader) {
     setEditing(reader);
-    setEditingMode(normalizedMode(reader.mode) === "REGISTER" ? "REGISTER" : "ENTRY_EXIT");
+    setEditingMode(reader.readerProtocol === "CLOUD_C" ? normalizedMode(reader.mode) : normalizedMode(reader.mode) === "REGISTER" ? "REGISTER" : "ENTRY_EXIT");
     setRegistrationQr("");
     setEntryExitQr("");
   }
@@ -353,6 +353,7 @@ export default function ReaderConsole({ compact = false }: { compact?: boolean }
               <label>Building<input value={selectedReader.building?.name || data?.buildings.find((building) => building.id === selectedReader.buildingId)?.name || "Assigned building"} readOnly /></label>
               <label>Purpose<select value={setupMode} onChange={(event) => setSetupMode(event.target.value)}>
                 <option value="REGISTER">Registration</option>
+                {selectedReader.readerProtocol === "CLOUD_C" && <><option value="ENTRY">Entry</option><option value="EXIT">Exit</option></>}
                 <option value="ENTRY_EXIT">Entry / Exit</option>
               </select></label>
             </fieldset>
@@ -395,6 +396,7 @@ export default function ReaderConsole({ compact = false }: { compact?: boolean }
             <label>Building<input value={data?.buildings.find((building) => building.id === editing.buildingId)?.name || "Assigned building"} readOnly /></label>
             <label>Purpose<select name="mode" value={editingMode} onChange={(event) => setEditingMode(event.target.value)}>
               <option value="REGISTER">Registration</option>
+              {editing.readerProtocol === "CLOUD_C" && <><option value="ENTRY">Entry</option><option value="EXIT">Exit</option></>}
               <option value="ENTRY_EXIT">Entry / Exit</option>
             </select></label>
             {editing.readerProtocol !== "CLOUD_C" && <label className="reader-config-upload">

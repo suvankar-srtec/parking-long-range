@@ -205,6 +205,9 @@ export async function processReaderScan(input: ParsedRfidReaderMessage, transpor
         else if (allottedGate.config.entryReaderId === reader.id) effectiveMode = "ENTRY";
         else if (allottedGate.config.exitReaderId === reader.id) effectiveMode = "EXIT";
       }
+      if (reader.readerProtocol === "CLOUD_C" && ["ENTRY", "EXIT", "ENTRY_EXIT"].includes(reader.mode)) {
+        effectiveMode = reader.mode as typeof effectiveMode;
+      }
       if (!["ENTRY_EXIT", "ENTRY", "EXIT"].includes(effectiveMode)) {
         return record(READER_NO_SUCCESS_CODE, "Gate direction must be configured before scanning.", "DENIED", undefined, visitor.companyId || undefined, undefined, visitor.id);
       }
@@ -351,7 +354,10 @@ export async function processReaderScan(input: ParsedRfidReaderMessage, transpor
         effectiveMode = "EXIT";
       }
     }
-    if (!["ENTRY_EXIT", "ENTRY", "EXIT"].includes(effectiveMode)) {
+    if (reader.readerProtocol === "CLOUD_C" && ["ENTRY", "EXIT", "ENTRY_EXIT"].includes(reader.mode)) {
+        effectiveMode = reader.mode as typeof effectiveMode;
+      }
+      if (!["ENTRY_EXIT", "ENTRY", "EXIT"].includes(effectiveMode)) {
       return record(
         READER_NO_SUCCESS_CODE,
         "Gate direction must be configured before scanning.",
