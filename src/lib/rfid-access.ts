@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/session";
 import { lockBuildingParking, ParkingError } from "@/lib/building-parking";
 import { normalizeCard, SCAN_DEBOUNCE_MS, type ParsedRfidReaderMessage } from "@/lib/rfid-reader";
-import { parseGateConfig } from "@/lib/gate-config";
+import { parseGateConfig, gateReaderDirection } from "@/lib/gate-config";
 
 export const RFID_TRANSACTION = { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted, maxWait: 10000, timeout: 20000 };
 const CAPTURED_SAVE_WINDOW_MS = 5 * 60 * 1000;
@@ -199,15 +199,7 @@ export async function processReaderScan(input: ParsedRfidReaderMessage, transpor
         return record(READER_NO_SUCCESS_CODE, "Reader is not allotted to a gate.", "DENIED", undefined, visitor.companyId || undefined, undefined, visitor.id);
       }
 
-      let effectiveMode = allottedGate.config.direction;
-      if (allottedGate.config.direction === "ENTRY_EXIT") {
-        if (allottedGate.config.entryReaderId === reader.id && allottedGate.config.exitReaderId === reader.id) effectiveMode = "ENTRY_EXIT";
-        else if (allottedGate.config.entryReaderId === reader.id) effectiveMode = "ENTRY";
-        else if (allottedGate.config.exitReaderId === reader.id) effectiveMode = "EXIT";
-      }
-      if (reader.readerProtocol === "CLOUD_C" && ["ENTRY", "EXIT", "ENTRY_EXIT"].includes(reader.mode)) {
-        effectiveMode = reader.mode as typeof effectiveMode;
-      }
+      const effectiveMode = gateReaderDirection(allottedGate.config, reader.id);
       if (!["ENTRY_EXIT", "ENTRY", "EXIT"].includes(effectiveMode)) {
         return record(READER_NO_SUCCESS_CODE, "Gate direction must be configured before scanning.", "DENIED", undefined, visitor.companyId || undefined, undefined, visitor.id);
       }
@@ -344,19 +336,7 @@ export async function processReaderScan(input: ParsedRfidReaderMessage, transpor
       );
     }
 
-    let effectiveMode = allottedGate.config.direction;
-    if (allottedGate.config.direction === "ENTRY_EXIT") {
-      if (allottedGate.config.entryReaderId === reader.id && allottedGate.config.exitReaderId === reader.id) {
-        effectiveMode = "ENTRY_EXIT";
-      } else if (allottedGate.config.entryReaderId === reader.id) {
-        effectiveMode = "ENTRY";
-      } else if (allottedGate.config.exitReaderId === reader.id) {
-        effectiveMode = "EXIT";
-      }
-    }
-    if (reader.readerProtocol === "CLOUD_C" && ["ENTRY", "EXIT", "ENTRY_EXIT"].includes(reader.mode)) {
-        effectiveMode = reader.mode as typeof effectiveMode;
-      }
+    const effectiveMode = gateReaderDirection(allottedGate.config, reader.id);
       if (!["ENTRY_EXIT", "ENTRY", "EXIT"].includes(effectiveMode)) {
       return record(
         READER_NO_SUCCESS_CODE,

@@ -33,13 +33,12 @@ export async function handleCloudHttp(request: Request, heartbeat: boolean) {
           deviceNumber: inputA, name: `Cloud C ${packet.Serial} - A (IN/WG1)`,
         } });
       }
-      const parent = existingA || legacy;
       for (const input of ["0", "1"]) {
         const deviceNumber = cloudInputDevice(packet.Serial, input);
         await tx.rfidReader.upsert({
           where: { deviceNumber },
           create: { deviceNumber, name: `Cloud C ${packet.Serial} - ${input === "0" ? "A (IN/WG1)" : "B (OUT/WG2)"}`,
-            buildingId: parent?.buildingId || null, enabled: false, mode: "ENTRY_EXIT",
+            buildingId: null, enabled: false, mode: "ENTRY_EXIT",
             readerProtocol: "CLOUD_C", connectionType: "HTTP", heartbeatSeconds: 5,
             lastSeenAt: new Date(), ...reportedIp },
           update: { readerProtocol: "CLOUD_C", connectionType: "HTTP", tcpConnected: false,

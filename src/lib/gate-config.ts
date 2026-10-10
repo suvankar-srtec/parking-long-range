@@ -93,3 +93,14 @@ export function serializeGateConfig(
   if (!firstReader && !secondReader) return direction;
   return `${direction}${ENTRY_READER_SEPARATOR}${firstReader ?? ""}${EXIT_READER_SEPARATOR}${secondReader ?? ""}`;
 }
+
+/** A directed gate assignment takes priority over a reader's general purpose. */
+export function gateReaderDirection(config: ParsedGateConfig, readerId: string): GateDirection {
+  if (config.direction !== "ENTRY_EXIT") return config.direction;
+  const entry = config.entryReaderId === readerId;
+  const exit = config.exitReaderId === readerId;
+  if (entry && exit) return "ENTRY_EXIT";
+  if (entry) return "ENTRY";
+  if (exit) return "EXIT";
+  return "SELECT";
+}
