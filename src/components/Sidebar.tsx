@@ -328,6 +328,14 @@ export default function Sidebar({
         <NavRow icon="visitor" label="Visitor Form" />
       </Link> : null}
 
+      {isSuperAdmin ? <Link
+        className={`sidebar-nav-link${pathname === "/offline-sync" ? " is-active" : ""}`}
+        href="/offline-sync"
+        aria-current={pathname === "/offline-sync" ? "page" : undefined}
+      >
+        <NavRow icon="reader" label="Offline Sync" />
+      </Link> : null}
+
       {showReports ? <Link
         className={`sidebar-nav-link${reportsActive ? " is-active" : ""}`}
         href="/reports"

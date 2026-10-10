@@ -2,7 +2,6 @@
 
 import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
 import Link from "@/components/AppLink";
-import CloudCOfflineSettings from "./CloudCOfflineSettings";
 import { readerStatus, type ReaderConnection } from "@/lib/reader-status";
 import { requestJson } from "@/lib/client-request";
 import { useFeedback, useMutation } from "./FeedbackProvider";
@@ -284,11 +283,6 @@ export default function ReaderConsole({ compact = false }: { compact?: boolean }
         })}
       </div>}
     </section>
-
-    {data?.canAssignReaders && [...new Set(data.readers
-      .filter(reader => reader.readerProtocol === "CLOUD_C" && /-[AB]$/.test(reader.deviceNumber))
-      .map(reader => reader.deviceNumber.slice(0, -2)))].map(serial =>
-        <CloudCOfflineSettings key={serial} serial={serial} />)}
 
     {showAvailable && <div className="modal-backdrop reader-modal-backdrop">
       <section className="modal-card reader-selector-modal" role="dialog" aria-modal="true" aria-label="Add RFID reader">

@@ -2,7 +2,7 @@
 
 A powered Cloud C controller configured with Access Check = Online first automatically uses its existing stored card permissions when the online server cannot be reached. This is controller firmware behavior, not an HTTP-to-TCP switch, and does not depend on a website request succeeding.
 
-The memory is shared by reader inputs A and B. The website shows one controller-level explanation to Super Admin; there are no card-slot, timezone, capacity or enable fields in this flow. Online reader purposes remain configurable as before. Offline decisions follow the controller's own saved configuration, which must be tested when physical input purposes are changed.
+The memory is shared by reader inputs A and B. The website shows one controller-level explanation on the Super Admin-only **Offline Sync** sidebar page; there are no card-slot, timezone, capacity or enable fields in this flow. Online reader purposes remain configurable as before. Offline decisions follow the controller's own saved configuration, which must be tested when physical input purposes are changed.
 
 Only cards already present in controller memory can be verified offline. This UI change does not automatically copy cards registered on the website to the controller. Existing controller cards are not cleared or overwritten by the informational panel. Unknown cards cannot be verified from the website while the controller is disconnected. A powered-off controller cannot verify any cards.
 
