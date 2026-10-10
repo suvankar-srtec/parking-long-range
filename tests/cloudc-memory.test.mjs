@@ -24,5 +24,17 @@ test("History identities deduplicate retransmissions but keep reused indices on 
   assert.equal(historyIdentity(packet,330).time.toISOString(),"2026-10-10T07:30:00.000Z");
   assert.equal(historyIdentity(packet).key,historyIdentity({...packet}).key);
   assert.notEqual(historyIdentity(packet).key,historyIdentity({...packet,EventTime:"2026-10-11 13:00:00"}).key);
-  assert.throws(()=>historyIdentity({...packet,EventTime:"bad"}));
+  assert.equal(historyIdentity({...packet,EventTime:"bad"}).time,null);
+  assert.throws(()=>historyIdentity({...packet,IndexEvent:"bad"}));
+});
+
+test("Firmware date variants and missing dates retain controller history", () => {
+  const packet = {Serial:"80M236",type:"100",IndexEvent:"45",Card:"8336774",Reader:"0"};
+  for (const EventTime of ["20261010112226","2026/10/10 11:22:26","2026-10-10T11:22:26Z"]) {
+    assert.equal(historyIdentity({...packet,EventTime}).time.toISOString(),"2026-10-10T11:22:26.000Z");
+  }
+  assert.equal(historyIdentity(packet).time,null);
+  assert.equal(historyIdentity({...packet,EventTime:"firmware-specific"}).time,null);
+  assert.equal(historyIdentity(packet).key,historyIdentity({...packet}).key);
+  assert.notEqual(historyIdentity(packet).key,historyIdentity({...packet,Card:"7975728"}).key);
 });

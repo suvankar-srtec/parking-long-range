@@ -233,7 +233,7 @@ export async function saveCloudHistory(packet: Record<string, string>) {
 
       cardNo: record.kind === "CARD" ? (packet.Card || "").slice(0, 128) : "",
 
-      action: "HISTORY", code: "HISTORY", createdAt: record.time,
+      action: "HISTORY", code: "HISTORY", ...(record.time ? { createdAt: record.time } : {}),
 
       message: `Controller ${record.kind.toLowerCase()} history; event type ${(packet.EventType || "unknown").slice(0, 32)}. Occupancy not replayed.`,
 

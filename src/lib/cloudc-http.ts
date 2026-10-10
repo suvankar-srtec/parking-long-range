@@ -93,7 +93,7 @@ export async function handleCloudHttp(request: Request, heartbeat: boolean) {
       code: detail?.code || null,
       column: detail?.meta?.column || null,
       table: detail?.meta?.table || null,
-      reason: stage === "parse-packet" && error instanceof Error ? error.message : null,
+      reason: ["parse-packet", "save-history"].includes(stage) && detail?.name === "Error" && error instanceof Error ? error.message : null,
     });
     return respond({ AcsRes: "0" });
   }
