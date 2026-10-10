@@ -14,10 +14,14 @@ function respond(fields: Record<string, string>, status = 200) {
 export async function handleCloudHttp(request: Request, heartbeat: boolean) {
   const token = new URL(request.url).searchParams.get("token");
   if (!validReaderToken(token)) return respond({ AcsRes: "0" }, 403);
+  let stage = "read-body";
   try {
-    const packet = parseCloudPacket(await readReaderBody(request), request.url);
+    const raw = await readReaderBody(request);
+    stage = "parse-packet";
+    const packet = parseCloudPacket(raw, request.url);
     if (heartbeat && !/^\d{1,10}$/.test(packet.Key || "")) return respond({ AcsRes: "0" }, 400);
     const reportedIp = isIP(packet.IP || "") === 4 ? { readerIp: packet.IP } : {};
+    stage = "save-reader";
     await prisma.rfidReader.upsert({
       where: { deviceNumber: packet.Serial },
       create: { deviceNumber: packet.Serial, name: `Cloud C ${packet.Serial}`,
@@ -37,12 +41,20 @@ export async function handleCloudHttp(request: Request, heartbeat: boolean) {
     // Initial integration supports ordinary cards only; other credentials fail closed.
     if (packet.type !== "0" || !/^\d{1,10}$/.test(packet.Card || "") ||
         !["0", "1"].includes(packet.Reader)) return respond({ AcsRes: "0" });
+    stage = "process-scan";
     const result = await processReaderScan({ deviceNumber: packet.Serial, decodedResult: packet.Card });
     return respond({ AcsRes: result.code === "0000" ? "1" : "0",
       ActIndex: packet.Reader, Time: "1", Card: packet.Card,
       Note: result.code === "0000" ? "Allowed" : "Denied" });
-  } catch {
-    console.error("CLOUDC_HTTP_FAILED");
+  } catch (error) {
+    const detail = error as { name?: string; code?: string; meta?: { column?: string; table?: string } };
+    console.error("CLOUDC_HTTP_FAILED", {
+      stage,
+      name: detail?.name || "UnknownError",
+      code: detail?.code || null,
+      column: detail?.meta?.column || null,
+      table: detail?.meta?.table || null,
+    });
     return respond({ AcsRes: "0" });
   }
 }
