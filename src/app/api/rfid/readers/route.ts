@@ -210,6 +210,30 @@ export async function POST(request: Request) {
       });
     }
 
+    // Cloud C has software-controlled purposes and does not use setup QR images.
+    if (body?.action === "configureCloud") {
+      const deviceNumber = String(body?.deviceNumber ?? "").trim();
+      const mode = String(body?.mode ?? "");
+      if (!["REGISTER", "ENTRY_EXIT"].includes(mode)) throw new ParkingError("Select Registration or Entry / Exit.");
+      const result = await prisma.$transaction(async (tx) => {
+        await lockRfid(tx);
+        const existing = await tx.rfidReader.findUnique({ where: { deviceNumber } });
+        if (!existing || existing.readerProtocol !== "CLOUD_C") throw new ParkingError("Cloud C reader not found.", 404);
+        if (!existing.buildingId) throw new ParkingError("Allot this reader to a building first.");
+        if (user.role === "SUPER_ADMIN") {
+          const building = await tx.building.findUnique({ where: { id: existing.buildingId } });
+          if (!isPrimarySuperAdmin(user) && building?.superAdminId !== user.id) throw new ParkingError("This reader belongs to another Super Admin.", 403);
+        } else if (user.role !== "BUILDING_ADMIN" || user.buildingId !== existing.buildingId || !hasPermission(user, "building.configureReaders")) {
+          throw new ParkingError("Reader configuration is not permitted.", 403);
+        }
+        if (existing.mode !== mode) {
+          await tx.rfidEnrollment.updateMany({ where: { readerId: existing.id, status: { in: ["WAITING", "CAPTURED"] } }, data: { status: "CANCELLED" } });
+        }
+        return tx.rfidReader.update({ where: { id: existing.id }, data: { mode, enabled: true } });
+      }, RFID_TRANSACTION);
+      return NextResponse.json({ ok: true, reader: readerSummary(result), message: "Cloud C reader configured and enabled." });
+    }
+
     if (user.role !== "BUILDING_ADMIN") {
       throw new ParkingError("Only the Building Admin can configure reader purpose.", 403);
     }

@@ -16,6 +16,7 @@ type Reader = ReaderConnection & {
   buildingId: string | null;
   readerIp: string | null;
   sourcePort: number | null;
+  readerProtocol?: string;
   hasRegistrationQr?: boolean;
   hasEntryExitQr?: boolean;
   building?: { name: string } | null;
@@ -198,6 +199,7 @@ export default function ReaderConsole({ compact = false }: { compact?: boolean }
     event.preventDefault();
     void execute(async () => {
       const result = await requestJson("/api/rfid/readers", "POST", {
+        ...(editing!.readerProtocol === "CLOUD_C" ? { action: "configureCloud" } : {}),
         deviceNumber: editing!.deviceNumber,
         mode: editingMode,
         ...(registrationQr ? { registrationQrData: registrationQr } : {}),
@@ -225,6 +227,7 @@ export default function ReaderConsole({ compact = false }: { compact?: boolean }
             buildingId: form.get("buildingId"),
           })
         : await requestJson("/api/rfid/readers", "POST", {
+            ...(selectedReader.readerProtocol === "CLOUD_C" ? { action: "configureCloud" } : {}),
             deviceNumber: selectedReader.deviceNumber,
             mode: setupMode,
             ...(registrationQr ? { registrationQrData: registrationQr } : {}),
@@ -273,9 +276,9 @@ export default function ReaderConsole({ compact = false }: { compact?: boolean }
             <div className="reader-line"><i className={"reader-dot " + state.tone} />{state.label}</div>
             <p>{data.buildings.find((building) => building.id === reader.buildingId)?.name || "Building not assigned"} · {modeLabel(normalizedMode(reader.mode))}</p>
             <p className="muted">{reader.enabled ? "Approved" : "Disabled"} · Last contact: {reader.lastSeenAt ? new Date(reader.lastSeenAt).toLocaleString() : "None"}</p>
-            <p className="muted">Setup QR: {reader.hasRegistrationQr ? "Registration ✓" : "Registration missing"} · {reader.hasEntryExitQr ? "Entry / Exit ✓" : "Entry / Exit missing"}</p>
-            {(data.canConfigureReaders || data.canRemoveReaders) && <div className="reader-card-actions">
-              {data.canConfigureReaders ? <button className="secondary-button" onClick={() => openConfigure(reader)}>Configure purpose</button> : null}
+            {reader.readerProtocol === "CLOUD_C" ? <p className="muted">Cloud C HTTP controller - Purpose configured in this app</p> : <p className="muted">Setup QR: {reader.hasRegistrationQr ? "Registration ✓" : "Registration missing"} · {reader.hasEntryExitQr ? "Entry / Exit ✓" : "Entry / Exit missing"}</p>}
+            {(data.canConfigureReaders || data.canRemoveReaders || (data.canAssignReaders && reader.readerProtocol === "CLOUD_C")) && <div className="reader-card-actions">
+              {(data.canConfigureReaders || (data.canAssignReaders && reader.readerProtocol === "CLOUD_C")) ? <button className="secondary-button" onClick={() => openConfigure(reader)}>Configure purpose</button> : null}
               {data.canRemoveReaders ? <button className="secondary-button" disabled={pending} onClick={() => removeReader(reader)}>Remove reader</button> : null}
             </div>}
           </article>;
@@ -354,7 +357,7 @@ export default function ReaderConsole({ compact = false }: { compact?: boolean }
               </select></label>
             </fieldset>
             <div className="reader-setup-body reader-admin-setup-body">
-              <label className="reader-qr-upload">
+              {selectedReader.readerProtocol !== "CLOUD_C" && <label className="reader-qr-upload">
                 <span>{setupMode === "REGISTER" ? "Registration QR" : "Entry / Exit QR"}</span>
                 <div className="reader-upload-row">
                   <input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => void pickQr(event, setupMode === "REGISTER" ? "registration" : "entryExit")} />
@@ -362,7 +365,7 @@ export default function ReaderConsole({ compact = false }: { compact?: boolean }
                     ? <img src={setupMode === "REGISTER" ? registrationQr : entryExitQr} alt="Configuration QR preview" />
                     : <em>Optional</em>}
                 </div>
-              </label>
+              </label>}
               <div className="reader-allot-note">
                 <strong>Only allotted readers are available here</strong>
                 <span>This reader is already tied to your building. Adding it only activates its selected purpose.</span>
@@ -394,20 +397,20 @@ export default function ReaderConsole({ compact = false }: { compact?: boolean }
               <option value="REGISTER">Registration</option>
               <option value="ENTRY_EXIT">Entry / Exit</option>
             </select></label>
-            <label className="reader-config-upload">
+            {editing.readerProtocol !== "CLOUD_C" && <label className="reader-config-upload">
               {editingMode === "REGISTER" ? "Registration QR" : "Entry / Exit QR"}
               <input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => void pickQr(event, editingMode === "REGISTER" ? "registration" : "entryExit")} />
-            </label>
+            </label>}
           </fieldset>
 
-          <div className="reader-qr-preview reader-config-qr">
+          {editing.readerProtocol !== "CLOUD_C" && <div className="reader-qr-preview reader-config-qr">
             <div>
               <span className="section-kicker">CONFIGURATION QR</span>
               <strong>{modeLabel(editingMode)}</strong>
             </div>
             {editingQr ? <img src={editingQr} alt={`${modeLabel(editingMode)} configuration QR preview`} /> : hasQrForMode(editing, editingMode) ? <img src={storedQrUrl(editing, editingMode, revision)} alt={`${modeLabel(editingMode)} reader configuration QR`} /> : <div className="reader-qr-placeholder">QR not uploaded</div>}
             <small>{editingQr || hasQrForMode(editing, editingMode) ? "Scan this QR with the physical reader if the hardware mode needs updating." : `Upload the ${modeLabel(editingMode)} QR if required by the hardware.`}</small>
-          </div>
+          </div>}
 
           <div className="modal-actions reader-compact-actions">
             <button type="button" className="secondary-button" disabled={pending} onClick={() => setEditing(null)}>Cancel</button>

@@ -286,6 +286,7 @@ model Visitor {
 model RfidReader {
   id           String   @id @default(cuid())
   deviceNumber String   @unique
+  readerProtocol String @default("QR")
   name         String
   mode         String   @default("ENTRY_EXIT")
   enabled      Boolean  @default(false)

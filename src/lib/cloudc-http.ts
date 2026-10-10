@@ -1,3 +1,4 @@
+import { isIP } from "node:net";
 import { prisma } from "@/lib/prisma";
 import { validReaderToken } from "@/lib/rfid-http";
 import { readReaderBody } from "@/lib/rfid-reader";
@@ -16,13 +17,14 @@ export async function handleCloudHttp(request: Request, heartbeat: boolean) {
   try {
     const packet = parseCloudPacket(await readReaderBody(request), request.url);
     if (heartbeat && !/^\d{1,10}$/.test(packet.Key || "")) return respond({ AcsRes: "0" }, 400);
+    const reportedIp = isIP(packet.IP || "") === 4 ? { readerIp: packet.IP } : {};
     await prisma.rfidReader.upsert({
       where: { deviceNumber: packet.Serial },
       create: { deviceNumber: packet.Serial, name: `Cloud C ${packet.Serial}`,
-        enabled: false, mode: "ENTRY_EXIT", connectionType: "HTTP",
-        heartbeatSeconds: 5, lastSeenAt: new Date() },
-      update: { connectionType: "HTTP", tcpConnected: false,
-        heartbeatSeconds: 5, lastSeenAt: new Date() },
+        enabled: false, mode: "ENTRY_EXIT", readerProtocol: "CLOUD_C", connectionType: "HTTP",
+        heartbeatSeconds: 5, lastSeenAt: new Date(), ...reportedIp },
+      update: { readerProtocol: "CLOUD_C", connectionType: "HTTP", tcpConnected: false,
+        heartbeatSeconds: 5, lastSeenAt: new Date(), ...reportedIp },
     });
     if (heartbeat) return respond({ Key: packet.Key });
     // Offline history is acknowledged, never treated as a new access request.
