@@ -12,6 +12,7 @@ function fixture() {
   const gate = { direction: "ENTRY_EXIT::ENTRY_READER::a::EXIT_READER::b" };
   const tx = {
     $executeRaw: async () => {},
+    rfidEvent: { findMany: async () => [] },
     cloudCOffline: {
       upsert: async () => state.config,
       findUnique: async () => structuredClone(state.config),

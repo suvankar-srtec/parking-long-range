@@ -1,3 +1,4 @@
+import { reconcileHistory, reconcileStoredHistory } from "@/lib/cloudc-history-reconcile";
 import { createHash } from "node:crypto";
 
 import type { Prisma } from "@prisma/client";
@@ -139,6 +140,7 @@ export async function planOffline(tx: Prisma.TransactionClient, serial: string, 
 }
 
 export async function offlineHeartbeat(packet: Record<string, string>): Promise<Record<string, string>> {
+  await reconcileStoredHistory(packet.Serial);
 
   // Disabled by default; no controller configuration is changed until Super Admin opts in.
 
@@ -221,6 +223,8 @@ export async function saveCloudHistory(packet: Record<string, string>) {
 
   await prisma.$transaction(async tx => {
 
+    await tx.$queryRaw`SELECT pg_advisory_xact_lock(72015002)::text`;
+
     await tx.cloudCHistory.upsert({ where: { id }, create: {
 
       id, serial: packet.Serial, kind: record.kind, recordIndex: record.index, packet: safePacket,
@@ -247,7 +251,9 @@ export async function saveCloudHistory(packet: Record<string, string>) {
 
     }, update: {} });
 
-  });
+    await reconcileHistory(tx, id, packet, record.time);
+
+  }, { maxWait: 10000, timeout: 20000 });
 
 }
 
