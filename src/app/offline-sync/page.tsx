@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import SignOutButton from "@/components/SignOutButton";
 import CloudCOfflineHistory from "@/components/CloudCOfflineHistory";
-import CloudCOfflineSettings from "@/components/CloudCOfflineSettings";
 import { getCurrentUser } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { effectivePermissions } from "@/lib/permissions";
@@ -30,8 +29,6 @@ export default async function OfflineSyncPage() {
       </header>
       <div style={{ display: "grid", gap: 18, marginTop: 19 }}>
         <CloudCOfflineHistory controllers={controllers} />
-        {controllers.map(serial => <CloudCOfflineSettings key={serial} serial={serial} />)}
-        {!controllers.length && <section className="portfolio-card"><p>No Cloud C controllers are available. Connect a controller to view its offline memory information.</p></section>}
       </div>
     </section>
   </main>;
