@@ -36,7 +36,7 @@ export async function expireEnrollments(tx: Prisma.TransactionClient) {
   });
 }
 
-export async function processReaderScan(input: ParsedRfidReaderMessage) {
+export async function processReaderScan(input: ParsedRfidReaderMessage, transport: "HTTP" | "TCP" = "HTTP") {
   const rawScan = input.decodedResult.trim();
   // Accept the current compact visitor QR and the earlier QR format that also
   // included BUILDING / COMPANY fields, so already-emailed passes keep working.
@@ -55,13 +55,13 @@ export async function processReaderScan(input: ParsedRfidReaderMessage) {
         deviceNumber: input.deviceNumber,
         name: "Reader " + input.deviceNumber,
         lastSeenAt: now,
-        connectionType: "HTTP",
-        tcpConnected: false,
+        connectionType: transport,
+        tcpConnected: transport === "TCP",
       },
       update: {
         lastSeenAt: now,
-        connectionType: "HTTP",
-        tcpConnected: false,
+        connectionType: transport,
+        ...(transport === "HTTP" ? { tcpConnected: false } : {}),
       },
     });
 
