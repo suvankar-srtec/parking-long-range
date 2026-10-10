@@ -4,7 +4,8 @@ import { requestJson } from "@/lib/client-request";
 
 type RecordRow = { id: string; serial: string; kind: string; index: string; scanTime: string;
   card: string; reader: string; eventType: string; receivedAt: string };
-type History = { ok: boolean; records: RecordRow[]; total: number; nextCursor: string | null };
+type SyncStatus = { serial: string; configured: boolean; enabled: boolean; trackedCards: number; pending: number; failed: number; lastAckAt: string | null; lastError: string | null };
+type History = { sync: SyncStatus[]; ok: boolean; records: RecordRow[]; total: number; nextCursor: string | null };
 export default function CloudCOfflineHistory({ controllers }: { controllers: string[] }) {
   const [serial, setSerial] = useState("");
   const [cursor, setCursor] = useState<string | null>(null);
@@ -46,6 +47,14 @@ export default function CloudCOfflineHistory({ controllers }: { controllers: str
     {error && <p role="alert">{error}</p>}
     {loading && <p role="status">Loading controller records...</p>}
     {data && <>
+      {data.sync.map(status => <div key={status.serial} className="reader-card">
+        <h3>{status.serial} - card memory sync</h3>
+        <p>{!status.configured ? "Waiting for automatic memory initialization" : status.enabled ? "Automatic sync enabled" : "Memory sync disabled"}</p>
+        <p>{status.trackedCards} tracked cards - {status.pending} commands pending - {status.failed} failed</p>
+        <p>Last acknowledged command: {status.lastAckAt ? new Date(status.lastAckAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }) : "None"}</p>
+        {status.lastError && <p role="alert">{status.lastError}</p>}
+        <p className="muted">Wait for pending commands to reach zero with no failures before testing offline. Blocks and deletions reach controller memory only while connected.</p>
+      </div>)}
       <p>{data.total} stored records. Latest records refresh automatically every 10 seconds.</p>
       <div style={{ overflowX: "auto" }}>
         <table className="rfid-reader-table" style={{ minWidth: 950 }}>

@@ -39,9 +39,10 @@ export async function offlineReaders(tx: Prisma.TransactionClient, serial: strin
 
   };
 
-  // Controller memory is shared. Only the physical IN/OUT mapping is supported offline.
+  // Shared card permissions do not depend on which input is assigned Entry or Exit.
 
-  return direction(a) === "ENTRY" && direction(b) === "EXIT" ? a.buildingId : null;
+  return ["ENTRY", "EXIT", "ENTRY_EXIT"].includes(direction(a)) &&
+    ["ENTRY", "EXIT", "ENTRY_EXIT"].includes(direction(b)) ? a.buildingId : null;
 
 }
 
@@ -131,7 +132,7 @@ export async function planOffline(tx: Prisma.TransactionClient, serial: string, 
 
     slots: [...old, ...desired.filter(s => !old.some(o => o.card === s.card))], fingerprint, plannedAt: now,
 
-    lastError: config.enabled && !buildingId ? "Offline sync paused: configure A as Entry and B as Exit in the same enabled building. Stored app cards are being removed." : null,
+    lastError: config.enabled && !buildingId ? "Offline sync paused: assign both inputs to access gates in the same enabled building. Stored app cards are being removed." : null,
 
   } });
 
@@ -141,6 +142,13 @@ export async function offlineHeartbeat(packet: Record<string, string>): Promise<
 
   // Disabled by default; no controller configuration is changed until Super Admin opts in.
 
+  // Inventory verified locally on 2026-10-10: card indices 10000-10099 and
+  // timezone index 1 are unused on 80M236. Never guess slots on other controllers.
+  if (packet.Serial === "80M236") {
+    await prisma.cloudCOffline.upsert({ where: { serial: packet.Serial },
+      create: { serial: packet.Serial, enabled: true, slotStart: 10000,
+        slotCount: 100, timezone: 1, utcOffsetMinutes: 0 }, update: {} });
+  }
   const config = await prisma.cloudCOffline.findUnique({ where: { serial: packet.Serial } });
 
   if (!config) return {};

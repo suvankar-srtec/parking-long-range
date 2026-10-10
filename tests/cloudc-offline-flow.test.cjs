@@ -13,6 +13,7 @@ function fixture() {
   const tx = {
     $executeRaw: async () => {},
     cloudCOffline: {
+      upsert: async () => state.config,
       findUnique: async () => structuredClone(state.config),
       update: async ({data}) => Object.assign(state.config, data),
     },
@@ -88,4 +89,11 @@ test("Unacknowledged command stops the queue after bounded retries", async () =>
   assert.equal(Object.keys(result).length,0);
   assert.equal(f.state.commands[0].status,"FAILED");
   assert.match(f.state.config.lastError,/did not acknowledge/);
+});
+
+test("Swapping Entry and Exit assignments keeps shared offline permissions", async () => {
+  const f=fixture();
+  const original = f.tx.rfidReader.findMany;
+  f.tx.rfidReader.findMany = async () => (await original()).map(r => ({...r, building: {...r.building, gates:[{direction:"ENTRY_EXIT::ENTRY_READER::b::EXIT_READER::a"}]}}));
+  assert.equal(await f.offlineReaders(f.tx,f.serial),"building");
 });

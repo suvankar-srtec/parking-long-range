@@ -22,10 +22,12 @@ export async function GET(request: Request) {
     if (cursor && !await prisma.cloudCHistory.findFirst({ where: { ...where, id: cursor }, select: { id: true } })) {
       throw new ParkingError("History page is no longer available.", 404);
     }
-    const [rows, total] = await Promise.all([
+    const [rows, total, configs, commands] = await Promise.all([
       prisma.cloudCHistory.findMany({ where, orderBy: [{ receivedAt: "desc" }, { id: "desc" }],
         take: 101, ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}) }),
       prisma.cloudCHistory.count({ where }),
+      prisma.cloudCOffline.findMany({ where: { serial: where.serial } }),
+      prisma.cloudCCommand.groupBy({ by: ["serial", "status"], where: { serial: where.serial }, _count: { _all: true } }),
     ]);
     const records = rows.slice(0, 100).map(row => {
       const packet = row.packet as Record<string, unknown>;
@@ -34,7 +36,15 @@ export async function GET(request: Request) {
         scanTime: field("EventTime"), card: field("Card"), reader: field("Reader"),
         eventType: field("EventType"), receivedAt: row.receivedAt };
     });
-    return NextResponse.json({ ok: true, records, total, nextCursor: rows.length > 100 ? records[99].id : null },
+    const sync = (serial ? [serial] : serials).map(value => {
+      const config = configs.find(c => c.serial === value);
+      const count = (status: string) => commands.find(c => c.serial === value && c.status === status)?._count._all || 0;
+      return { serial: value, enabled: config?.enabled || false, configured: Boolean(config),
+        trackedCards: Array.isArray(config?.slots) ? config.slots.length : 0,
+        pending: count("PENDING"), failed: count("FAILED"), lastAckAt: config?.lastAckAt || null,
+        lastError: config?.lastError || null };
+    });
+    return NextResponse.json({ ok: true, records, total, sync, nextCursor: rows.length > 100 ? records[99].id : null },
       { headers: { "Cache-Control": "no-store" } });
   } catch (error) { return rfidApiError(error); }
 }

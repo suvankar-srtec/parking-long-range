@@ -11,3 +11,11 @@ Current website card blocks, parking capacity and live occupancy cannot be check
 To test: verify a stored card while connected, disconnect internet while retaining power and reader wiring, scan that card, then reconnect and inspect uploaded history. Confirm controller Offline/Online settings and actual relay behavior on the hardware. Existing QR functionality and online Cloud C authorization remain available.
 
 The earlier opt-in memory-command backend is retained for compatibility with any previously configured installation; its reserved-memory configuration is not automatically enabled or changed by this UI. It is separate from the controller's native offline verification.
+
+## Automatic registered-card synchronization
+
+Controller 80M236 is automatically initialized on authenticated HTTP heartbeats using a locally verified empty card range, zero-based indices 10000-10099, and unused timezone index 1. Existing SDK sample cards and other timezones are retained. No clear-all command or manual form is used. Other controllers require an inventory check before an automatic memory profile is added; their unused slots are never guessed.
+
+Registered numeric RFID cards for the controller's enabled building are copied through persisted C1 commands. Blocked/deleted cards are removed from app-managed slots using command 15. Changes are checked once per minute while connected; card validity renews hourly and expires after 24 hours without renewal. The current profile tracks up to 100 distinct card numbers. Both inputs must be enabled, in the same enabled building, and assigned access gates. Either input can be Entry or Exit. Registration inputs pause grants because offline memory is shared.
+
+Offline Sync shows queued/failed commands and the last controller acknowledgement. Wait for zero pending commands and no errors, then verify the cards in the controller Cards list before disconnecting power-free network connectivity for a test. Offline scanning follows the controller's local direction settings; the cloud's live parking capacity and occupancy cannot be enforced offline. Website blocks cannot reach a disconnected controller until reconnect or permission expiry.
