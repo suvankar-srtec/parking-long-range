@@ -369,3 +369,42 @@ model RfidEvent {
   @@index([visitorId])
   @@map("rfid_events")
 }
+
+model CloudCOffline {
+  serial String @id
+  enabled Boolean @default(false)
+  slotStart Int
+  slotCount Int
+  timezone Int
+  utcOffsetMinutes Int @default(0)
+  slots Json @default("[]")
+  fingerprint String @default("")
+  plannedAt DateTime?
+  checkedAt DateTime?
+  lastAckAt DateTime?
+  lastError String?
+  @@map("cloudc_offline")
+}
+
+model CloudCCommand {
+  id Int @id @default(autoincrement())
+  serial String
+  frame String @db.Text
+  status String @default("PENDING")
+  attempts Int @default(0)
+  sentAt DateTime?
+  createdAt DateTime @default(now())
+  @@index([serial, status, id])
+  @@map("cloudc_commands")
+}
+
+model CloudCHistory {
+  id String @id
+  serial String
+  kind String
+  recordIndex String
+  packet Json
+  receivedAt DateTime @default(now())
+  @@index([serial, receivedAt])
+  @@map("cloudc_history")
+}

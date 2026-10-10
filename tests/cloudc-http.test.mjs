@@ -29,3 +29,7 @@ test("Separate controller inputs route to independent device identities", () => 
   for (const input of ['', '2', '-1', 'A']) assert.throws(() => cloudInputDevice('80M236', input));
   assert.throws(() => cloudInputDevice('invalid serial', '0'));
 });
+
+test("Vendor capitalized history Type is accepted", () => {
+  assert.equal(parseCloudPacket('{"Serial":"80M236","Type":100}', 'http://test/api').type,"100");
+});

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
 import Link from "@/components/AppLink";
+import CloudCOfflineSettings from "./CloudCOfflineSettings";
 import { readerStatus, type ReaderConnection } from "@/lib/reader-status";
 import { requestJson } from "@/lib/client-request";
 import { useFeedback, useMutation } from "./FeedbackProvider";
@@ -279,6 +280,7 @@ export default function ReaderConsole({ compact = false }: { compact?: boolean }
               {(data.canConfigureReaders || (data.canAssignReaders && reader.readerProtocol === "CLOUD_C")) ? <button className="secondary-button" onClick={() => openConfigure(reader)}>Configure purpose</button> : null}
               {data.canRemoveReaders ? <button className="secondary-button" disabled={pending} onClick={() => removeReader(reader)}>Remove reader</button> : null}
             </div>}
+            {data.canAssignReaders && reader.readerProtocol === "CLOUD_C" && reader.deviceNumber.endsWith("-A") && <CloudCOfflineSettings serial={reader.deviceNumber.slice(0, -2)} />}
           </article>;
         })}
       </div>}

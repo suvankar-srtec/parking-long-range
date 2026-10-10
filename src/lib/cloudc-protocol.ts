@@ -17,6 +17,7 @@ export function parseCloudPacket(raw: string, url: string): Record<string, strin
 
     }
   }
+  if (!fields.type && fields.Type) fields.type = fields.Type;
   fields.Serial = (fields.Serial || "").replace(/\0+$/g, "").trim();
   if (!/^[A-Za-z0-9_-]{1,64}$/.test(fields.Serial || "")) throw new Error("Invalid serial");
   return fields;

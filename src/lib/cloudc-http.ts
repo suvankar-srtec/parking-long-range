@@ -5,6 +5,8 @@ import { readReaderBody } from "@/lib/rfid-reader";
 import { lockRfid, RFID_TRANSACTION, processReaderScan } from "@/lib/rfid-access";
 import { cloudReply, parseCloudPacket, cloudInputDevice } from "@/lib/cloudc-protocol";
 
+import { offlineHeartbeat, saveCloudHistory } from "@/lib/cloudc-offline";
+
 function respond(fields: Record<string, string>, status = 200) {
   return new Response(cloudReply(fields), {
     status, headers: { "Content-Type": "text/plain", "Cache-Control": "no-store" },
@@ -53,12 +55,26 @@ export async function handleCloudHttp(request: Request, heartbeat: boolean) {
         });
       }
     }, RFID_TRANSACTION);
-    if (heartbeat) return respond({ Key: packet.Key });
-    // Offline history is acknowledged, never treated as a new access request.
+    if (heartbeat) {
+      stage = "offline-sync";
+      try { return respond({ Key: packet.Key, ...await offlineHeartbeat(packet) }); }
+      catch {
+        console.error("CLOUDC_OFFLINE_SYNC_FAILED", { serial: packet.Serial });
+        await prisma.cloudCOffline.updateMany({ where: { serial: packet.Serial }, data: {
+          lastError: "Memory sync could not be planned. Check reserved capacity and retry sync.",
+        } }).catch(() => undefined);
+        return respond({ Key: packet.Key });
+      }
+    }
+    // Acknowledge only after durable storage; retries are deduplicated.
     if (packet.type === "100" && /^\d+$/.test(packet.IndexEvent || "")) {
+      stage = "save-history";
+      await saveCloudHistory(packet);
       return respond({ IndexEvent: packet.IndexEvent });
     }
     if (packet.type === "101" && /^\d+$/.test(packet.IndexAlarm || "")) {
+      stage = "save-history";
+      await saveCloudHistory(packet);
       return respond({ IndexAlarm: packet.IndexAlarm });
     }
     // Initial integration supports ordinary cards only; other credentials fail closed.
