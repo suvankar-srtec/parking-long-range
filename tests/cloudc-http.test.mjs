@@ -14,3 +14,11 @@ test("Malformed packets rejected", () => {
     assert.throws(() => parseCloudPacket(body, 'http://test/api'));
   }
 });
+
+test("Padded firmware serial and optional status fields", () => {
+  const packet = parseCloudPacket(JSON.stringify({Serial:"80M236  ",Key:"123",Status:null,Flag:true,Extra:{value:1}}), 'http://test/api');
+  assert.equal(packet.Serial, '80M236');
+  assert.equal(packet.Key, '123');
+  assert.equal(parseCloudPacket(JSON.stringify({Serial:"80M236\u0000",Key:123}), 'http://test/api').Serial, '80M236');
+  assert.throws(() => parseCloudPacket('{"Serial":null}', 'http://test/api'));
+});
