@@ -2,9 +2,18 @@
 import { useEffect, useState } from "react";
 import { requestJson } from "@/lib/client-request";
 
-type RecordRow = { id: string; serial: string; kind: string; index: string; scanTime: string;
+type RecordRow = { id: string; serial: string; kind: string; index: string; scanTime: string; scanTimeIso: string | null;
   card: string; reader: string; eventType: string; receivedAt: string };
 type History = { ok: boolean; records: RecordRow[] };
+const scanTimeFormatter = new Intl.DateTimeFormat("en-IN", {
+  timeZone: "Asia/Kolkata", day: "2-digit", month: "short", year: "numeric",
+  hour: "numeric", minute: "2-digit", second: "2-digit", hour12: true,
+});
+function displayScanTime(row: RecordRow) {
+  if (!row.scanTimeIso) return row.scanTime || "Unknown";
+  const date = new Date(row.scanTimeIso);
+  return Number.isFinite(date.getTime()) ? scanTimeFormatter.format(date) : row.scanTime || "Unknown";
+}
 export default function CloudCOfflineHistory({ controllers }: { controllers: string[] }) {
   const [serial, setSerial] = useState("");
   const [data, setData] = useState<History | null>(null);
@@ -44,11 +53,11 @@ export default function CloudCOfflineHistory({ controllers }: { controllers: str
     {error && <p role="alert">{error}</p>}
     <div style={{ overflowX: "auto" }}>
       <table style={{ width: "100%", minWidth: 650, borderCollapse: "collapse", textAlign: "left" }}>
-        <thead><tr>{["Scan time", "Controller", "Reader", "Card", "Type", "Event code"].map(title =>
+        <thead><tr>{["Scan time (IST)", "Controller", "Reader", "Card", "Type", "Event code"].map(title =>
           <th key={title} scope="col" style={{ padding: "12px 10px", background: "#eef5fa", borderBottom: "1px solid #dbe5ed" }}>{title}</th>
         )}</tr></thead>
         <tbody>{records.map(row => <tr key={row.id}>
-          <td>{row.scanTime || "Unknown"}</td><td>{row.serial}</td>
+          <td style={{ whiteSpace: "nowrap", padding: "8px 10px" }}>{displayScanTime(row)}</td><td>{row.serial}</td>
           <td>{row.reader === "0" ? "A / IN" : row.reader === "1" ? "B / OUT" : row.reader || "-"}</td>
           <td>{row.card || "-"}</td><td>{row.kind}</td><td>{row.eventType || "-"}</td>
         </tr>)}

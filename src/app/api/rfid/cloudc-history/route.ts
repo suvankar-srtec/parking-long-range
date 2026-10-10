@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { historyIdentity } from "@/lib/cloudc-memory-protocol";
 import { prisma } from "@/lib/prisma";
 import { rfidUser, rfidApiError } from "@/lib/rfid-access";
 import { ParkingError } from "@/lib/building-parking";
@@ -32,8 +33,14 @@ export async function GET(request: Request) {
     const records = rows.slice(0, 100).map(row => {
       const packet = row.packet as Record<string, unknown>;
       const field = (key: string) => typeof packet[key] === "string" || typeof packet[key] === "number" ? String(packet[key]).slice(0, 128) : "";
+      const scan = historyIdentity({
+        Serial: row.serial, type: row.kind === "CARD" ? "100" : "101",
+        IndexEvent: row.recordIndex, IndexAlarm: row.recordIndex,
+        EventTime: field("EventTime"), Card: field("Card"),
+        Reader: field("Reader"), EventType: field("EventType"),
+      }, configs.find(config => config.serial === row.serial)?.utcOffsetMinutes ?? 0);
       return { id: row.id, serial: row.serial, kind: row.kind, index: row.recordIndex,
-        scanTime: field("EventTime"), card: field("Card"), reader: field("Reader"),
+        scanTime: field("EventTime"), scanTimeIso: scan.time?.toISOString() ?? null, card: field("Card"), reader: field("Reader"),
         eventType: field("EventType"), receivedAt: row.receivedAt };
     });
     const sync = (serial ? [serial] : serials).map(value => {
