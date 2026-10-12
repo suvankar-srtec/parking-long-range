@@ -92,6 +92,15 @@ export async function processReaderScan(input: ParsedRfidReaderMessage, transpor
     }
 
     if (!reader.enabled || !reader.buildingId) return record("1004", "Reader must be assigned to a building and enabled.");
+    const previousScan = await tx.rfidEvent.findFirst({ where: {
+      readerId: reader.id, code: { in: ["0000", "0001"] }, action: { not: "DUPLICATE" },
+      createdAt: { gt: new Date(now.getTime() - SCAN_DEBOUNCE_MS) },
+    }, orderBy: { createdAt: "desc" } });
+    if (previousScan) return record(READER_NO_SUCCESS_CODE, "Duplicate scan ignored. Reader pauses for 1 second.", "DUPLICATE",
+      previousScan.cardNo === cardNo ? previousScan.vehicleId || undefined : undefined,
+      previousScan.cardNo === cardNo ? previousScan.companyId || undefined : undefined,
+      previousScan.cardNo === cardNo ? previousScan.ownerVehicleId || undefined : undefined,
+      previousScan.cardNo === cardNo ? previousScan.visitorId || undefined : undefined);
     await lockBuildingParking(tx, reader.buildingId);
 
     const buildingStatus = await tx.building.findUniqueOrThrow({
@@ -204,15 +213,15 @@ export async function processReaderScan(input: ParsedRfidReaderMessage, transpor
         return record(READER_NO_SUCCESS_CODE, "Gate direction must be configured before scanning.", "DENIED", undefined, visitor.companyId || undefined, undefined, visitor.id);
       }
 
-      if (visitor.lastAccessAt && receivedAt - visitor.lastAccessAt.getTime() < SCAN_DEBOUNCE_MS) {
-        return record(READER_NO_SUCCESS_CODE, "Duplicate scan ignored", "IGNORED", undefined, visitor.companyId || undefined, undefined, visitor.id);
+      if (visitor.lastAccessDevice === reader.deviceNumber && visitor.lastAccessAt && receivedAt - visitor.lastAccessAt.getTime() < SCAN_DEBOUNCE_MS) {
+        return record(READER_NO_SUCCESS_CODE, "Duplicate scan ignored", "DUPLICATE", undefined, visitor.companyId || undefined, undefined, visitor.id);
       }
 
       let enter: boolean;
       if (effectiveMode === "ENTRY_EXIT") {
         enter = !visitor.isInside;
       } else if (effectiveMode === "ENTRY") {
-        if (visitor.isInside) return record(READER_NO_SUCCESS_CODE, "Visitor is already inside. Exit before another Entry.", "DENIED", undefined, visitor.companyId || undefined, undefined, visitor.id);
+        if (visitor.isInside) return record(READER_NO_SUCCESS_CODE, "Duplicate entry: visitor is already inside. Exit before another Entry.", "DUPLICATE", undefined, visitor.companyId || undefined, undefined, visitor.id);
         enter = true;
       } else {
         if (!visitor.isInside) return record(READER_NO_SUCCESS_CODE, "Visitor is already outside.", "IGNORED", undefined, visitor.companyId || undefined, undefined, visitor.id);
@@ -350,15 +359,15 @@ export async function processReaderScan(input: ParsedRfidReaderMessage, transpor
 
     const currentInside = ownerVehicle ? ownerVehicle.isInside : vehicle!.isInside;
     const lastAccessAt = ownerVehicle ? ownerVehicle.lastAccessAt : vehicle!.lastAccessAt;
-    if (lastAccessAt && receivedAt - lastAccessAt.getTime() < SCAN_DEBOUNCE_MS) {
-      return record(READER_NO_SUCCESS_CODE, "Duplicate scan ignored", "IGNORED", vehicle?.id, vehicle?.companyId, ownerVehicle?.id);
+    if ((ownerVehicle?.lastAccessDevice || vehicle?.lastAccessDevice) === reader.deviceNumber && lastAccessAt && receivedAt - lastAccessAt.getTime() < SCAN_DEBOUNCE_MS) {
+      return record(READER_NO_SUCCESS_CODE, "Duplicate scan ignored", "DUPLICATE", vehicle?.id, vehicle?.companyId, ownerVehicle?.id);
     }
 
     let enter: boolean;
     if (effectiveMode === "ENTRY_EXIT") {
       enter = !currentInside;
     } else if (effectiveMode === "ENTRY") {
-      if (currentInside) return record(READER_NO_SUCCESS_CODE, "Vehicle is already inside. Exit before another Entry.", "DENIED", vehicle?.id, vehicle?.companyId, ownerVehicle?.id);
+      if (currentInside) return record(READER_NO_SUCCESS_CODE, "Duplicate entry: vehicle is already inside. Exit before another Entry.", "DUPLICATE", vehicle?.id, vehicle?.companyId, ownerVehicle?.id);
       enter = true;
     } else {
       if (!currentInside) return record(READER_NO_SUCCESS_CODE, "Vehicle is already outside.", "IGNORED", vehicle?.id, vehicle?.companyId, ownerVehicle?.id);

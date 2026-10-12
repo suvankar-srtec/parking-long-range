@@ -1,6 +1,6 @@
 export type ParsedRfidReaderMessage = { decodedResult: string; deviceNumber: string };
 export const READER_MODES = ["UNASSIGNED", "REGISTER", "ENTRY", "EXIT", "ENTRY_EXIT"] as const;
-export const SCAN_DEBOUNCE_MS = 3000;
+export const SCAN_DEBOUNCE_MS = 1000;
 export function normalizeCard(value: string) { return value.trim().toUpperCase(); }
 export function readerReply(success: boolean, message: string) {
   const description = message.replace(/[&=\r\n\u0000-\u001f]/g, " ").slice(0, 160);
