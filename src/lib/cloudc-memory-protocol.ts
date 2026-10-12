@@ -74,7 +74,7 @@ export function timezoneCommand(index: number, until: Date, utcOffsetMinutes = 0
 
   // Access bit 7 enables native anti-passback; low bits retain Card identification.
   // Verified by acknowledged HTTP command and controller APB checkbox on 80M236.
-  return memoryFrame(0x0d, Buffer.from([index, 0, 0, 23, 59, 255, 0x81, ...date.subarray(0, 3), 0]));
+  return memoryFrame(0x0d, Buffer.from([index, 0, 0, 23, 59, 255, 0x81, ...date.subarray(0, 3), 0, 0]));
 
 }
 

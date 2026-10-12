@@ -23,3 +23,7 @@ Offline Sync shows queued/failed commands and the last controller acknowledgemen
 ## Native offline anti-passback
 
 The app-managed time zone enables native APB using Access bit 7 (0x81 combines APB with Card identification). This was verified on controller 80M236 by an acknowledged heartbeat command and reading the enabled APB checkbox back from its time-zone page. Time-zone renewals preserve APB; the memory-plan version forces existing profiles to receive the updated setting. Test physically: entry once, another entry without exit must refuse, exit, then entry again. Offline Sync retains the controller?s original scan history, including older repeated entries that occurred before APB was enabled.
+
+## Online entry followed by offline exit
+
+On 80M236, registered vehicles can enter online only after their offline memory plan has been acknowledged without pending/failed commands. Until then the scan is denied without changing occupancy, with a visible memory-sync reason. Online exits and already-inside decisions continue through normal authorization. The controller remains powered in Online first mode and uses its native APB time zone when the server is unreachable. Offline exits reconcile the website after reconnection. The SDK documents no separate setter for a card?s inside/outside APB state; validate the actual online-entry/offline-exit sequence physically rather than fabricating a relay operation to force that state.

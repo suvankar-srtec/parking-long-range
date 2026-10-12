@@ -17,6 +17,7 @@ test("Boundary card IDs and slot ranges fail closed", () => {
 test("Timezone preserves native anti-passback and single-card identification", () => {
   const frame = Buffer.from(timezoneCommand(0,new Date("2026-10-11T13:00:00Z")), "hex");
   assert.equal(frame.reduce((a,b)=>a^b,0),3);
+  assert.equal(frame.readUInt16LE(5),12); // Vendor timezone payload includes two reserved bytes.
   assert.equal(frame[13] & 0x7f,1); // Single card identification.
   assert.equal(frame[13] & 0x80,0x80); // Native offline anti-passback stays enabled.
 });

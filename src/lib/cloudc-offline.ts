@@ -257,3 +257,47 @@ export async function saveCloudHistory(packet: Record<string, string>) {
 
 }
 
+
+// Do not admit a registered vehicle online until its offline grant is acknowledged.
+// Native APB tracks the real scan on the controller; this is not a fabricated scan
+// or a command to operate a relay when synchronizing memory.
+export async function cloudOfflineEntryGuard(packet: Record<string, string>): Promise<string | null> {
+  if (packet.Serial !== "80M236") return null;
+  return prisma.$transaction(async tx => {
+    await tx.$queryRaw`SELECT pg_advisory_xact_lock(72015002)::text`;
+    const deviceNumber = packet.Serial + (packet.Reader === "0" ? "-A" : "-B");
+    const reader = await tx.rfidReader.findUnique({ where: { deviceNumber } });
+    if (!reader?.enabled || !reader.buildingId || reader.mode === "REGISTER") return null;
+    const gates = await tx.gate.findMany({ where: { buildingId: reader.buildingId } });
+    const gate = gates.map(g => parseGateConfig(g.direction))
+      .find(g => g.entryReaderId === reader.id || g.exitReaderId === reader.id);
+    if (!gate || gateReaderDirection(gate, reader.id) === "EXIT") return null;
+    const [owner, vehicle] = await Promise.all([
+      tx.buildingOwnerVehicle.findUnique({ where: { rfidCardNo: packet.Card } }),
+      tx.vehicle.findUnique({ where: { rfidCardNo: packet.Card }, include: { company: true } }),
+    ]);
+    const target = owner?.buildingId === reader.buildingId ? owner
+      : vehicle?.company.buildingId === reader.buildingId ? vehicle : null;
+    if (!target || target.isInside || target.rfidBlocked) return null;
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${"cloudc-offline:" + packet.Serial}))`;
+    await planOffline(tx, packet.Serial);
+    const config = await tx.cloudCOffline.findUnique({ where: { serial: packet.Serial } });
+    const unfinished = await tx.cloudCCommand.count({ where: {
+      serial: packet.Serial, status: { in: ["PENDING", "FAILED"] },
+    } });
+    const ready = config?.enabled && !config.lastError && config.plannedAt && config.lastAckAt
+      && config.lastAckAt >= config.plannedAt && !unfinished
+      && Array.isArray(config.slots) && (config.slots as Slot[]).some(slot => slot.card === packet.Card)
+      && Date.now() - config.plannedAt.getTime() < 24 * 3600_000;
+    if (ready) return null;
+    const message = "Offline card memory is not ready. Keep the controller connected until sync completes.";
+    await tx.rfidEvent.create({ data: {
+      readerId: reader.id, buildingId: reader.buildingId, deviceNumber, cardNo: packet.Card,
+      ownerVehicleId: target === owner ? owner!.id : undefined,
+      vehicleId: target === vehicle ? vehicle!.id : undefined,
+      companyId: target === vehicle ? vehicle!.companyId : undefined,
+      action: "DENIED", code: "0001", message,
+    } });
+    return message;
+  }, { maxWait: 10000, timeout: 20000 });
+}

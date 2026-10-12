@@ -98,3 +98,35 @@ test("Swapping Entry and Exit assignments keeps shared offline permissions", asy
   f.tx.rfidReader.findMany = async () => (await original()).map(r => ({...r, building: {...r.building, gates:[{direction:"ENTRY_EXIT::ENTRY_READER::b::EXIT_READER::a"}]}}));
   assert.equal(await f.offlineReaders(f.tx,f.serial),"building");
 });
+
+function entryFixture() {
+  const f=fixture();const now=new Date();
+  Object.assign(f.state.config,{checkedAt:now,plannedAt:new Date(now.getTime()-1000),lastAckAt:now,lastError:null,slots:[{index:100,card:"8336774"}]});
+  f.owner={id:"owner",buildingId:"building",isInside:false,rfidBlocked:false};f.denied=[];
+  f.tx.$queryRaw=async()=>[];
+  f.tx.rfidReader.findUnique=async({where})=>({id:where.deviceNumber.endsWith("-A")?"a":"b",buildingId:"building",enabled:true,mode:"ENTRY_EXIT"});
+  f.tx.gate={findMany:async()=>[{direction:"ENTRY_EXIT::ENTRY_READER::a::EXIT_READER::b"}]};
+  f.tx.buildingOwnerVehicle.findUnique=async()=>f.owner;
+  f.tx.vehicle.findUnique=async()=>null;
+  f.tx.rfidEvent.create=async({data})=>f.denied.push(data);
+  f.tx.cloudCCommand.count=async()=>f.state.commands.filter(c=>["PENDING","FAILED"].includes(c.status)).length;
+  f.packet={Serial:f.serial,Reader:"0",Card:"8336774"};
+  return f;
+}
+test("Online entry waits for acknowledged offline memory without changing occupancy",async()=>{
+ const f=entryFixture();f.state.commands.push({status:"PENDING"});
+ assert.match(await f.cloudOfflineEntryGuard(f.packet),/not ready/);assert.equal(f.owner.isInside,false);assert.equal(f.denied.length,1);
+});
+test("Acknowledged card memory permits normal online authorization",async()=>{
+ const f=entryFixture();assert.equal(await f.cloudOfflineEntryGuard(f.packet),null);assert.equal(f.denied.length,0);
+});
+test("Exit and already-inside scans retain existing access decisions during sync failure",async()=>{
+ const f=entryFixture();f.state.config.lastError="sync failed";
+ assert.equal(await f.cloudOfflineEntryGuard({...f.packet,Reader:"1"}),null);
+ f.owner.isInside=true;assert.equal(await f.cloudOfflineEntryGuard(f.packet),null);
+});
+test("Missing or unacknowledged card memory cannot grant online entry",async()=>{
+ for(const change of [{slots:[]},{lastAckAt:null},{enabled:false},{lastError:"failed"}]){
+  const f=entryFixture();Object.assign(f.state.config,change);assert.match(await f.cloudOfflineEntryGuard(f.packet),/not ready/);
+ }
+});

@@ -5,7 +5,7 @@ import { readReaderBody } from "@/lib/rfid-reader";
 import { lockRfid, RFID_TRANSACTION, processReaderScan } from "@/lib/rfid-access";
 import { cloudReply, parseCloudPacket, cloudInputDevice } from "@/lib/cloudc-protocol";
 
-import { offlineHeartbeat, saveCloudHistory } from "@/lib/cloudc-offline";
+import { offlineHeartbeat, saveCloudHistory, cloudOfflineEntryGuard } from "@/lib/cloudc-offline";
 
 function respond(fields: Record<string, string>, status = 200) {
   return new Response(cloudReply(fields), {
@@ -80,6 +80,9 @@ export async function handleCloudHttp(request: Request, heartbeat: boolean) {
     // Initial integration supports ordinary cards only; other credentials fail closed.
     if (packet.type !== "0" || !/^\d{1,10}$/.test(packet.Card || "") ||
         !["0", "1"].includes(packet.Reader)) return respond({ AcsRes: "0" });
+    stage = "verify-offline-entry";
+    const memoryIssue = await cloudOfflineEntryGuard(packet);
+    if (memoryIssue) return respond({ AcsRes: "0", Reader: packet.Reader, Card: packet.Card, Note: "Offline memory not ready" });
     stage = "process-scan";
     const result = await processReaderScan({ deviceNumber: cloudInputDevice(packet.Serial, packet.Reader), decodedResult: packet.Card });
     return respond({ AcsRes: result.code === "0000" ? "1" : "0",
