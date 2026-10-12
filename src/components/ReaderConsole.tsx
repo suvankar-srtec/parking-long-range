@@ -310,7 +310,7 @@ export default function ReaderConsole({ compact = false }: { compact?: boolean }
   return <>
     <section className="portfolio-card">
       <div className="reader-toolbar reader-toolbar-top controller-toolbar">
-        <div className="controller-toolbar-title"><h2>Controllers &amp; readers</h2><span>{[...groups.values()].filter(group => group.serial).length} controllers ? {data?.readers.length ?? 0} readers</span></div>
+        <div className="controller-toolbar-title"><h2>Controllers &amp; readers</h2><span>{[...groups.values()].filter(group => group.serial).length} controllers / {data?.readers.length ?? 0} readers</span></div>
         <input className="controller-search" type="search" aria-label="Search controllers or readers" placeholder="Search controller or reader" value={deviceSearch} onChange={event => setDeviceSearch(event.target.value)} />
         {data?.canAddReaders && <button className="secondary-button" type="button" onClick={openAddReader}>+ Add reader</button>}
         <strong>{activity.inside} vehicles inside</strong>
@@ -319,20 +319,9 @@ export default function ReaderConsole({ compact = false }: { compact?: boolean }
       {!data ? <p><Spinner /> Loading readers…</p> : <div className="reader-grid controller-grid">
         {visibleGroups.map(([key, group]) => {
           if (!group.serial) return renderReader(group.readers[0]);
-          const newest = [...group.readers].sort((a, b) =>
-            (Date.parse(b.lastSeenAt || "") || 0) - (Date.parse(a.lastSeenAt || "") || 0))[0];
-          // Controller contact is independent of each input's approval/purpose.
-          const state = error ? { tone: "unknown", label: "Status unavailable" }
-            : readerStatus({ ...newest, enabled: true, buildingId: undefined });
           return <section key={key} className="controller-card" aria-label={`Controller ${group.serial}`}>
-            <header className="controller-card-head">
-              <div className="controller-heading"><span className="controller-icon" aria-hidden="true">?</span><div><h2>Cloud C <span>{group.serial}</span></h2>
-                <p>{newest.readerIp || "IP not detected"} ? {group.readers.length} inputs</p></div></div>
-              <span className={"controller-status " + state.tone}><i className={"reader-dot " + state.tone} />{state.label}</span>
-            </header>
+            <header className="controller-card-head"><h2>Cloud C {group.serial}</h2></header>
             <div className="controller-reader-grid">{group.readers.map(reader => renderReader(reader, true))}</div>
-            <footer className="controller-card-footer"><span>{[...new Set(group.readers.map(reader => reader.building?.name || data!.buildings.find(building => building.id === reader.buildingId)?.name || "Unassigned"))].join(" ? ")}</span>
-              <span>Last contact {newest.lastSeenAt ? new Date(newest.lastSeenAt).toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", hour12: true }) + " IST" : "?"}</span></footer>
           </section>;
         })}
         {!visibleGroups.length && <p className="muted">{deviceSearch ? "No controllers or readers match your search." : "No readers configured."}</p>}
@@ -477,9 +466,9 @@ export default function ReaderConsole({ compact = false }: { compact?: boolean }
 
     <style>{`
       .controller-toolbar{gap:12px;margin-bottom:18px}.controller-toolbar-title{margin-right:auto}.controller-toolbar-title h2{font-size:16px;margin:0 0 3px}.controller-toolbar-title span{color:#768699;font-size:11px}.controller-search{width:230px;max-width:100%;padding:8px 10px;border:1px solid #d5dfeb;border-radius:7px;background:#fff;font-size:12px}
-      .controller-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,440px),1fr));gap:14px}
+      .controller-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,400px),1fr));gap:14px}
       .controller-card{border:1px solid #dbe4ef;border-radius:10px;background:#fff;min-width:0;overflow:hidden;box-shadow:0 2px 6px rgba(20,48,80,.035)}
-      .controller-card-head{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:13px 15px;background:#f7faff;border-bottom:1px solid #e4ebf3}
+      .controller-card-head{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 15px;background:#f7faff;border-bottom:1px solid #e4ebf3}
       .controller-heading{display:flex;align-items:center;gap:10px;min-width:0}.controller-icon{display:grid;place-items:center;width:34px;height:34px;border:1px solid #d7e5f5;border-radius:8px;background:#edf4fe;color:#246ac2;font-size:23px}
       .controller-card-head h2{margin:0;font-size:14px;font-weight:750}.controller-card-head h2 span{font-weight:600}.controller-card-head p{margin:4px 0 0;color:#78869a;font-size:10px}
       .controller-status{display:inline-flex;align-items:center;gap:5px;padding:4px 7px;border-radius:6px;font-size:10px;white-space:nowrap;background:#f0f4f8;color:#64748b}.controller-status.online{background:#ecf8f2;color:#168453}.controller-status.offline{background:#fff0f0;color:#bf4141}
