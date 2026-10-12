@@ -27,3 +27,7 @@ The app-managed time zone enables native APB using Access bit 7 (0x81 combines A
 ## Online entry followed by offline exit
 
 On 80M236, registered vehicles can enter online only after their offline memory plan has been acknowledged without pending/failed commands. Until then the scan is denied without changing occupancy, with a visible memory-sync reason. Online exits and already-inside decisions continue through normal authorization. The controller remains powered in Online first mode and uses its native APB time zone when the server is unreachable. Offline exits reconcile the website after reconnection. The SDK documents no separate setter for a card?s inside/outside APB state; validate the actual online-entry/offline-exit sequence physically rather than fabricating a relay operation to force that state.
+
+## Online-first transition diagnostics
+
+Online first is retained with the existing 1.5-second verification wait and five-second heartbeat interval. Stored-history backfill runs with Next.js after() after the heartbeat response; it no longer delays the controller?s key/command acknowledgement. Slow HTTP handlers log CLOUDC_HTTP_SLOW with elapsed milliseconds and stage, without tokens or card numbers. Native firmware connection detection remains separate from the configured per-scan wait; a physical network-loss test is required to measure the transition.

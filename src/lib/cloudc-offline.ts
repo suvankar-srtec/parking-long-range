@@ -1,4 +1,4 @@
-import { reconcileHistory, reconcileStoredHistory } from "@/lib/cloudc-history-reconcile";
+import { reconcileHistory } from "@/lib/cloudc-history-reconcile";
 import { createHash } from "node:crypto";
 
 import type { Prisma } from "@prisma/client";
@@ -141,7 +141,6 @@ export async function planOffline(tx: Prisma.TransactionClient, serial: string, 
 }
 
 export async function offlineHeartbeat(packet: Record<string, string>): Promise<Record<string, string>> {
-  await reconcileStoredHistory(packet.Serial);
 
   // Disabled by default; no controller configuration is changed until Super Admin opts in.
 

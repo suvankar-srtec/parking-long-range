@@ -1,3 +1,5 @@
+import { after } from "next/server";
+import { reconcileStoredHistory } from "@/lib/cloudc-history-reconcile";
 import { isIP } from "node:net";
 import { prisma } from "@/lib/prisma";
 import { validReaderToken } from "@/lib/rfid-http";
@@ -16,11 +18,14 @@ function respond(fields: Record<string, string>, status = 200) {
 export async function handleCloudHttp(request: Request, heartbeat: boolean) {
   const token = new URL(request.url).searchParams.get("token");
   if (!validReaderToken(token)) return respond({ AcsRes: "0" }, 403);
+  const startedAt = performance.now();
+  let serial: string | undefined;
   let stage = "read-body";
   try {
     const raw = await readReaderBody(request);
     stage = "parse-packet";
     const packet = parseCloudPacket(raw, request.url);
+    serial = packet.Serial;
     if (heartbeat && !/^\d{1,10}$/.test(packet.Key || "")) return respond({ AcsRes: "0" }, 400);
     const reportedIp = isIP(packet.IP || "") === 4 ? { readerIp: packet.IP } : {};
     stage = "save-reader";
@@ -56,6 +61,10 @@ export async function handleCloudHttp(request: Request, heartbeat: boolean) {
       }
     }, RFID_TRANSACTION);
     if (heartbeat) {
+      after(async () => {
+        try { await reconcileStoredHistory(packet.Serial); }
+        catch { console.error("CLOUDC_HISTORY_RECONCILE_FAILED", { serial: packet.Serial }); }
+      });
       stage = "offline-sync";
       try { return respond({ Key: packet.Key, ...await offlineHeartbeat(packet) }); }
       catch {
@@ -99,5 +108,8 @@ export async function handleCloudHttp(request: Request, heartbeat: boolean) {
       reason: ["parse-packet", "save-history"].includes(stage) && detail?.name === "Error" && error instanceof Error ? error.message : null,
     });
     return respond({ AcsRes: "0" });
+  } finally {
+    const elapsedMs = Math.round(performance.now() - startedAt);
+    if (elapsedMs >= 1500) console.warn("CLOUDC_HTTP_SLOW", { heartbeat, serial, stage, elapsedMs });
   }
 }
