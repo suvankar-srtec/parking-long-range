@@ -256,6 +256,34 @@ export default function ReaderConsole({ compact = false }: { compact?: boolean }
     });
   }
 
+  function renderReader(reader: Reader) {
+
+          const state = error ? { tone: "unknown", label: "Status unavailable" } : readerStatus(reader);
+          return <article className="reader-card" key={reader.id}>
+            <h3>{reader.readerProtocol === "CLOUD_C" && /-[AB]$/.test(reader.deviceNumber) ? `Reader ${reader.deviceNumber.endsWith("-A") ? "A (IN/WG1)" : "B (OUT/WG2)"}` : reader.name}</h3>
+            <p>{reader.deviceNumber} · {reader.readerIp || "IP not detected"}</p>
+            <div className="reader-line"><i className={"reader-dot " + state.tone} />{state.label}</div>
+            <p>{data!.buildings.find((building) => building.id === reader.buildingId)?.name || "Building not assigned"} · {modeLabel(normalizedMode(reader.mode))}</p>
+            <p className="muted">{reader.enabled ? "Approved" : "Disabled"} · Last contact: {reader.lastSeenAt ? new Date(reader.lastSeenAt).toLocaleString() : "None"}</p>
+            {reader.readerProtocol === "CLOUD_C" ? null : <p className="muted">Setup QR: {reader.hasRegistrationQr ? "Registration ✓" : "Registration missing"} · {reader.hasEntryExitQr ? "Entry / Exit ✓" : "Entry / Exit missing"}</p>}
+            {(data!.canConfigureReaders || data!.canRemoveReaders || (data!.canAssignReaders && reader.readerProtocol === "CLOUD_C")) && <div className="reader-card-actions">
+              {(data!.canConfigureReaders || (data!.canAssignReaders && reader.readerProtocol === "CLOUD_C")) ? <button className="secondary-button" onClick={() => openConfigure(reader)}>Configure purpose</button> : null}
+              {data!.canRemoveReaders ? <button className="secondary-button" disabled={pending} onClick={() => removeReader(reader)}>Remove reader</button> : null}
+            </div>}
+          </article>;
+
+  }
+
+  const groups = new Map<string, { serial: string | null; readers: Reader[] }>();
+  for (const reader of data?.readers ?? []) {
+    const serial = reader.readerProtocol === "CLOUD_C" && /-[AB]$/.test(reader.deviceNumber)
+      ? reader.deviceNumber.slice(0, -2) : null;
+    const key = serial ? "controller:" + serial : "reader:" + reader.id;
+    const group = groups.get(key) ?? { serial, readers: [] };
+    group.readers.push(reader);
+    groups.set(key, group);
+  }
+
   const editingQr = editingMode === "REGISTER" ? registrationQr : entryExitQr;
 
   return <>
@@ -266,20 +294,22 @@ export default function ReaderConsole({ compact = false }: { compact?: boolean }
       </div>
 
       {!data ? <p><Spinner /> Loading readers…</p> : <div className="reader-grid">
-        {data.readers.map((reader) => {
-          const state = error ? { tone: "unknown", label: "Status unavailable" } : readerStatus(reader);
-          return <article className="reader-card" key={reader.id}>
-            <h3>{reader.name}</h3>
-            <p>{reader.deviceNumber} · {reader.readerIp || "IP not detected"}</p>
-            <div className="reader-line"><i className={"reader-dot " + state.tone} />{state.label}</div>
-            <p>{data.buildings.find((building) => building.id === reader.buildingId)?.name || "Building not assigned"} · {modeLabel(normalizedMode(reader.mode))}</p>
-            <p className="muted">{reader.enabled ? "Approved" : "Disabled"} · Last contact: {reader.lastSeenAt ? new Date(reader.lastSeenAt).toLocaleString() : "None"}</p>
-            {reader.readerProtocol === "CLOUD_C" ? <p className="muted">Cloud C HTTP controller - Purpose configured in this app</p> : <p className="muted">Setup QR: {reader.hasRegistrationQr ? "Registration ✓" : "Registration missing"} · {reader.hasEntryExitQr ? "Entry / Exit ✓" : "Entry / Exit missing"}</p>}
-            {(data.canConfigureReaders || data.canRemoveReaders || (data.canAssignReaders && reader.readerProtocol === "CLOUD_C")) && <div className="reader-card-actions">
-              {(data.canConfigureReaders || (data.canAssignReaders && reader.readerProtocol === "CLOUD_C")) ? <button className="secondary-button" onClick={() => openConfigure(reader)}>Configure purpose</button> : null}
-              {data.canRemoveReaders ? <button className="secondary-button" disabled={pending} onClick={() => removeReader(reader)}>Remove reader</button> : null}
-            </div>}
-          </article>;
+        {[...groups.entries()].map(([key, group]) => {
+          if (!group.serial) return renderReader(group.readers[0]);
+          const newest = [...group.readers].sort((a, b) =>
+            (Date.parse(b.lastSeenAt || "") || 0) - (Date.parse(a.lastSeenAt || "") || 0))[0];
+          // Controller contact is independent of each input's approval/purpose.
+          const state = error ? { tone: "unknown", label: "Status unavailable" }
+            : readerStatus({ ...newest, enabled: true, buildingId: undefined });
+          return <section key={key} className="controller-card" aria-label={`Controller ${group.serial}`}>
+            <header className="controller-card-head">
+              <div><div className="section-kicker">CONTROLLER</div><h2>Cloud C {group.serial}</h2>
+                <p>{newest.readerIp || "IP not detected"}</p></div>
+              <div><div className="reader-line"><i className={"reader-dot " + state.tone} />{state.label}</div>
+                <p>{group.readers.length} reader inputs</p></div>
+            </header>
+            <div className="controller-reader-grid">{group.readers.map(renderReader)}</div>
+          </section>;
         })}
       </div>}
     </section>
@@ -421,6 +451,11 @@ export default function ReaderConsole({ compact = false }: { compact?: boolean }
     </div>}
 
     <style>{`
+      .controller-card{grid-column:1/-1;border:1px solid #d4ded8;border-radius:10px;padding:16px;background:#f8fbff;min-width:0}
+      .controller-card-head{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid #dce5ec}
+      .controller-card-head h2{margin:4px 0;font-size:20px}.controller-card-head p{margin:5px 0;color:#6c7c87;font-size:12px}
+      .controller-reader-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.controller-reader-grid .reader-card{background:#fff;min-width:0}
+      @media(max-width:760px){.controller-reader-grid{grid-template-columns:1fr}}
       .reader-toolbar,.reader-card-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
       .reader-toolbar-top{justify-content:flex-end;margin-bottom:12px}
       .reader-modal-backdrop{padding:12px}
