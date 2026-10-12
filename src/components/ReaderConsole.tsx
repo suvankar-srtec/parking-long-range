@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
 import Link from "@/components/AppLink";
-import { readerStatus, type ReaderConnection } from "@/lib/reader-status";
+import { readerStatus, readerServerClockOffset, type ReaderConnection } from "@/lib/reader-status";
 import { requestJson } from "@/lib/client-request";
 import { useFeedback, useMutation } from "./FeedbackProvider";
 import { ActionButton, Spinner } from "./LoadingIndicator";
@@ -23,6 +23,7 @@ type Reader = ReaderConnection & {
 };
 
 type ReaderData = {
+  serverTime?: string;
   readers: Reader[];
   availableReaders: Reader[];
   buildings: { id: string; name: string }[];
@@ -85,6 +86,7 @@ export default function ReaderConsole({ compact = false }: { compact?: boolean }
   const [activity, setActivity] = useState<Activity>({ inside: 0 });
   const [error, setError] = useState(false);
   const [summaryDelayed, setSummaryDelayed] = useState(false);
+  const [serverClockOffset, setServerClockOffset] = useState(0);
   const [editing, setEditing] = useState<Reader | null>(null);
   const [editingMode, setEditingMode] = useState("ENTRY_EXIT");
   const [showAvailable, setShowAvailable] = useState(false);
@@ -111,12 +113,13 @@ export default function ReaderConsole({ compact = false }: { compact?: boolean }
         return payload as T;
       }
       const [readerResult, activityResult] = await Promise.allSettled([
-        getJson<ReaderData>("/api/rfid/readers"),
+        getJson<ReaderData>("/api/rfid/readers").then(devices => ({ devices, offset: readerServerClockOffset(devices.serverTime) })),
         compact ? Promise.resolve(null) : getJson<Activity>("/api/rfid/events?summary=1"),
       ]);
       if (stopped) return;
       if (readerResult.status === "fulfilled") {
-        setData(readerResult.value);
+        setData(readerResult.value.devices);
+        setServerClockOffset(readerResult.value.offset);
         setError(false);
         failed = false;
       } else {
@@ -189,7 +192,7 @@ export default function ReaderConsole({ compact = false }: { compact?: boolean }
     return <div className="reader-panel">
       <Link href="/access-control" className="reader-heading">RFID readers</Link>
       {error ? <p>Status unavailable</p> : !data ? <p>Loading readers…</p> : !data.readers.length ? <p>No readers configured</p> : data.readers.map((reader) => {
-        const state = readerStatus(reader);
+        const state = readerStatus(reader, Date.now() + serverClockOffset);
         return <div className="reader-line" key={reader.id}>
           <i className={"reader-dot " + state.tone} />
           <span>{reader.name} · {reader.deviceNumber}<small>{state.label}</small></span>
@@ -263,7 +266,7 @@ export default function ReaderConsole({ compact = false }: { compact?: boolean }
 
   function renderReader(reader: Reader, controllerInput = false) {
     if (controllerInput) {
-      const state = error ? { tone: "unknown", label: "Unavailable" } : readerStatus(reader);
+      const state = error ? { tone: "unknown", label: "Unavailable" } : readerStatus(reader, Date.now() + serverClockOffset);
       const input = reader.deviceNumber.endsWith("-A") ? "A" : "B";
       return <article className="controller-input-row" key={reader.id}>
         <div className="controller-input-identity"><span className="controller-input-letter">{input}</span>
@@ -279,7 +282,7 @@ export default function ReaderConsole({ compact = false }: { compact?: boolean }
     }
 
 
-          const state = error ? { tone: "unknown", label: "Status unavailable" } : readerStatus(reader);
+          const state = error ? { tone: "unknown", label: "Status unavailable" } : readerStatus(reader, Date.now() + serverClockOffset);
           return <article className="reader-card" key={reader.id}>
             <h3>{reader.readerProtocol === "CLOUD_C" && /-[AB]$/.test(reader.deviceNumber) ? `Reader ${reader.deviceNumber.endsWith("-A") ? "A (IN/WG1)" : "B (OUT/WG2)"}` : reader.name}</h3>
             <p>{reader.deviceNumber} · {reader.readerIp || "IP not detected"}</p>
@@ -355,7 +358,7 @@ export default function ReaderConsole({ compact = false }: { compact?: boolean }
             ? "No unassigned readers are currently available. Power on a reader and make sure its HTTPS URL is pointing to this application."
             : "No additional reader is currently allotted to your building. Super Admin must allot a reader first."}</p> : <div className="reader-selector-list">
             {data.availableReaders.map((reader) => {
-              const state = readerStatus(reader);
+              const state = readerStatus(reader, Date.now() + serverClockOffset);
               const selected = selectedReader?.id === reader.id;
               return <button type="button" className={`reader-selector-row${selected ? " selected" : ""}`} key={reader.id} onClick={() => setSelectedReader(reader)}>
                 <div className="reader-selector-main">

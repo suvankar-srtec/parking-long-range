@@ -16,3 +16,8 @@ export function readerStatus(reader: ReaderConnection, now = Date.now()) {
   if (reader.heartbeatSeconds) return age <= reader.heartbeatSeconds * 3000 ? { tone: "online", label: "Responding" } : { tone: "offline", label: "Not responding" };
   return age < 30000 ? { tone: "online", label: "Recently active" } : { tone: "unknown", label: "Idle; no heartbeat" };
 }
+
+export function readerServerClockOffset(serverTime?: string, receivedAt = Date.now()) {
+  const timestamp = serverTime ? Date.parse(serverTime) : NaN;
+  return Number.isFinite(timestamp) ? timestamp - receivedAt : 0;
+}

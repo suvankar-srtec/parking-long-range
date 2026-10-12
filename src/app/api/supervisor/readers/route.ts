@@ -17,5 +17,5 @@ export async function GET() {
     orderBy: { deviceNumber: "asc" },
   });
 
-  return NextResponse.json({ ok: true, readers }, { headers: { "Cache-Control": "no-store" } });
+  return NextResponse.json({ ok: true, readers, serverTime: new Date().toISOString() }, { headers: { "Cache-Control": "no-store" } });
 }

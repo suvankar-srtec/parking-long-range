@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "@/components/AppLink";
-import { readerStatus, type ReaderConnection } from "@/lib/reader-status";
+import { readerStatus, readerServerClockOffset, type ReaderConnection } from "@/lib/reader-status";
 
 type SidebarReader = ReaderConnection & {
   id: string;
@@ -12,6 +12,7 @@ type SidebarReader = ReaderConnection & {
 };
 
 type ReaderResponse = {
+  serverTime?: string;
   readers: SidebarReader[];
 };
 
@@ -26,6 +27,7 @@ export default function SidebarReaderStatus({
 }) {
   const [readers, setReaders] = useState<SidebarReader[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [serverClockOffset, setServerClockOffset] = useState(0);
 
   useEffect(() => {
     let stopped = false;
@@ -40,6 +42,7 @@ export default function SidebarReaderStatus({
         const payload = await response.json() as ReaderResponse;
         if (!response.ok) throw new Error("Reader status unavailable.");
         if (!stopped) {
+          setServerClockOffset(readerServerClockOffset(payload.serverTime));
           setReaders(Array.isArray(payload.readers) ? payload.readers : []);
           setLoaded(true);
         }
@@ -62,7 +65,7 @@ export default function SidebarReaderStatus({
       ? <Link href="/access-control" className="sidebar-reader-title">{title}</Link>
       : <span className="sidebar-reader-title">{title}</span>}
     {!loaded ? null : readers.length === 0 ? <span className="sidebar-reader-empty">No reader allotted</span> : readers.map((reader) => {
-      const online = readerStatus(reader).tone === "online";
+      const online = readerStatus(reader, Date.now() + serverClockOffset).tone === "online";
       const cloudInput = (reader.readerProtocol === "CLOUD_C" || reader.name?.startsWith("Cloud C "))
         && /-[AB]$/.test(reader.deviceNumber);
       const label = cloudInput
