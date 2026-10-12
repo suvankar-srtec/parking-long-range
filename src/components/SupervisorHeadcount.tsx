@@ -180,7 +180,7 @@ export default function SupervisorHeadcount({
 
   function manualExit(card: ActiveCard) {
     const subject = card.personType === "VISITOR" ? "visitor" : "vehicle";
-    if (!window.confirm(`Manually exit this ${subject}: ${card.personName} · ${card.vehicleNumber}?`)) return;
+    if (!window.confirm(`Request approval to manually exit this ${subject}: ${card.personName} · ${card.vehicleNumber}?`)) return;
     void executeManualExit(async () => {
       const response = await fetch("/api/supervisor/manual-exit", {
         method: "POST",
@@ -228,7 +228,7 @@ export default function SupervisorHeadcount({
           <table className={styles.activeCardsTable}>
             <thead><tr><th>RFID / QR</th><th>Vehicle</th><th>Person</th><th>Type</th><th>Company</th><th>Department / Accessory</th><th>Entry time</th><th>Action</th></tr></thead>
             <tbody>{data?.activeCards?.length ? data.activeCards.map((card) => <tr key={card.id}>
-              <td data-label="RFID / QR">{card.rfidCardNo}</td><td data-label="Vehicle">{card.vehicleNumber}</td><td data-label="Person">{card.personName}</td><td data-label="Type">{card.personType === "OWNER" ? "Owner" : card.personType === "VISITOR" ? "Visitor" : "Employee"}</td><td data-label="Company">{card.companyName}</td><td data-label="Department / Accessory">{card.department}</td><td data-label="Entry time">{card.entryTime ? new Date(card.entryTime).toLocaleString() : "-"}</td><td data-label="Action"><button type="button" className={styles.manualExitButton} disabled={manualExitPending} onClick={() => manualExit(card)}>{manualExitPending ? "Please wait…" : "Manual exit"}</button></td>
+              <td data-label="RFID / QR">{card.rfidCardNo}</td><td data-label="Vehicle">{card.vehicleNumber}</td><td data-label="Person">{card.personName}</td><td data-label="Type">{card.personType === "OWNER" ? "Owner" : card.personType === "VISITOR" ? "Visitor" : "Employee"}</td><td data-label="Company">{card.companyName}</td><td data-label="Department / Accessory">{card.department}</td><td data-label="Entry time">{card.entryTime ? new Date(card.entryTime).toLocaleString() : "-"}</td><td data-label="Action"><button type="button" className={styles.manualExitButton} disabled={manualExitPending} onClick={() => manualExit(card)}>{manualExitPending ? "Please wait…" : "Request manual exit"}</button></td>
             </tr>) : <tr><td colSpan={8} className={styles.emptyTable}>No active RFID cards or visitor QR entries are currently on site.</td></tr>}</tbody>
           </table>
         </div>

@@ -408,3 +408,36 @@ model CloudCHistory {
   @@index([serial, receivedAt])
   @@map("cloudc_history")
 }
+
+model ManualExitNotification {
+  id String @id @default(cuid())
+  eventId String? @unique
+  targetKind String
+  targetId String
+  targetAccessAt DateTime?
+  status String @default("PENDING")
+  approvedById String?
+  approvedByName String?
+  approvedAt DateTime?
+  buildingId String
+  buildingName String
+  actorId String
+  actorName String
+  vehicleNumber String
+  personName String
+  cardNo String
+  createdAt DateTime @default(now())
+  reads ManualExitNotificationRead[]
+  @@index([buildingId, createdAt])
+  @@map("manual_exit_notifications")
+}
+
+model ManualExitNotificationRead {
+  notificationId String
+  userId String
+  readAt DateTime @default(now())
+  notification ManualExitNotification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  @@id([notificationId, userId])
+  @@index([userId])
+  @@map("manual_exit_notification_reads")
+}

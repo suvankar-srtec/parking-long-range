@@ -4,6 +4,7 @@ import type { UserRole } from "@prisma/client";
 import Link from "@/components/AppLink";
 import { useEffect, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import NotificationBadge from "./NotificationBadge";
 import SidebarReaderStatus from "./SidebarReaderStatus";
 import AdminCredentialsPopup from "./AdminCredentialsPopup";
 import SignOutButton from "./SignOutButton";
@@ -11,6 +12,7 @@ import { dashboardLabel, roleLabel } from "@/lib/roles";
 import { defaultPermissionsForRole } from "@/lib/permissions";
 
 type IconName =
+  | "bell"
   | "dashboard"
   | "building"
   | "parking"
@@ -36,6 +38,7 @@ function NavIcon({ name }: { name: IconName }) {
     "aria-hidden": true,
   };
 
+  if (name === "bell") return <svg {...common}><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg>;
   if (name === "dashboard") return <svg {...common}><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>;
   if (name === "building") return <svg {...common}><path d="M4 21V5.5L12 3v18"/><path d="M12 8h8v13"/><path d="M7 8h2M7 12h2M7 16h2M15 11h2M15 15h2M3 21h18"/></svg>;
   if (name === "parking") return <svg {...common}><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M9 17V7h4.2a3.2 3.2 0 0 1 0 6.4H9"/><path d="M9 13.4h4.2"/></svg>;
@@ -267,6 +270,10 @@ export default function Sidebar({
           </Link> : null}
         </div>
       </div>
+
+      {(isSuperAdmin || role === "BUILDING_ADMIN") && <Link href="/notifications" className={`sidebar-nav-parent${pathname === "/notifications" ? " is-active" : ""}`}>
+        <NavRow icon="bell" label="Notifications" end={<NotificationBadge />} />
+      </Link>}
 
       {showAccess ? <div className="sidebar-nav-group">
         <button
