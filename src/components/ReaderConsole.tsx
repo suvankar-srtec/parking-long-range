@@ -84,6 +84,7 @@ export default function ReaderConsole({ compact = false }: { compact?: boolean }
   const [data, setData] = useState<ReaderData | null>(null);
   const [activity, setActivity] = useState<Activity>({ inside: 0 });
   const [error, setError] = useState(false);
+  const [summaryDelayed, setSummaryDelayed] = useState(false);
   const [editing, setEditing] = useState<Reader | null>(null);
   const [editingMode, setEditingMode] = useState("ENTRY_EXIT");
   const [showAvailable, setShowAvailable] = useState(false);
@@ -103,36 +104,39 @@ export default function ReaderConsole({ compact = false }: { compact?: boolean }
     let timer: ReturnType<typeof setTimeout>;
 
     async function load() {
-      try {
-        const [response, activityResponse] = await Promise.all([
-          fetch("/api/rfid/readers", { cache: "no-store", signal: AbortSignal.timeout(10000) }),
-          compact ? Promise.resolve(null) : fetch("/api/rfid/events?summary=1", {
-            cache: "no-store", signal: AbortSignal.timeout(10000),
-          }),
-        ]);
-        const devices = await response.json();
-        if (!response.ok) throw new Error(devices.message || "Reader status unavailable.");
-
-        let inside = 0;
-        if (activityResponse) {
-          const activityData = await activityResponse.json();
-          if (activityResponse.ok) inside = Number(activityData.inside || 0);
-        }
-
-        if (!stopped) {
-          setData(devices);
-          setActivity({ inside });
-          setError(false);
-          failed = false;
-        }
-      } catch (cause) {
-        if (!stopped) {
-          setError(true);
-          if (!compact && !failed) notify(cause instanceof Error ? cause.message : "Reader status unavailable.", "error");
-          failed = true;
-        }
+      async function getJson<T>(url: string): Promise<T> {
+        const response = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(10000) });
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.message || "Status unavailable.");
+        return payload as T;
       }
-      if (!stopped) timer = setTimeout(load, 5000);
+      const [readerResult, activityResult] = await Promise.allSettled([
+        getJson<ReaderData>("/api/rfid/readers"),
+        compact ? Promise.resolve(null) : getJson<Activity>("/api/rfid/events?summary=1"),
+      ]);
+      if (stopped) return;
+      if (readerResult.status === "fulfilled") {
+        setData(readerResult.value);
+        setError(false);
+        failed = false;
+      } else {
+        setError(true);
+        if (!compact && !failed) {
+          const cause = readerResult.reason;
+          const message = cause instanceof Error && cause.name === "TimeoutError"
+            ? "Reader status refresh took too long. Retrying automatically."
+            : "Reader status could not refresh. Retrying automatically.";
+          notify(message, "error");
+        }
+        failed = true;
+      }
+      if (activityResult.status === "fulfilled") {
+        if (activityResult.value) setActivity({ inside: Number(activityResult.value.inside || 0) });
+        setSummaryDelayed(false);
+      } else {
+        setSummaryDelayed(true);
+      }
+      timer = setTimeout(load, 5000);
     }
 
     void load();
@@ -316,6 +320,7 @@ export default function ReaderConsole({ compact = false }: { compact?: boolean }
         <strong>{activity.inside} vehicles inside</strong>
       </div>
 
+      {summaryDelayed && <p className="muted" role="status">Parking totals refresh delayed. Retrying automatically.</p>}
       {!data ? <p><Spinner /> Loading readers…</p> : <div className="reader-grid controller-grid">
         {visibleGroups.map(([key, group]) => {
           if (!group.serial) return renderReader(group.readers[0]);
