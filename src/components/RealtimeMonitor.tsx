@@ -1,4 +1,5 @@
 "use client";
+import { manualExitResult } from "@/lib/rfid-display";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Spinner } from "./LoadingIndicator";
@@ -193,7 +194,7 @@ export default function RealtimeMonitor({
             <td className={event.personType === "VISITOR" ? styles.visitorPerson : undefined}>{event.personType === "VISITOR" ? event.vehicle?.ownerName || "-" : "-"}</td>
             <td>{event.company?.name || "-"}</td>
             <td><span className={`${styles.actionBadge} ${event.action === "ENTRY" ? styles.entryBadge : event.action === "EXIT" ? styles.exitBadge : styles.deniedBadge}`}>{event.action}</span></td>
-            <td className={event.code === "0000" ? styles.successResult : styles.deniedResult}>{event.deviceNumber === "MANUAL" && event.action === "EXIT" ? event.message || "Manual exit" : event.code === "0000" ? event.action === "ENTRY" ? "Entry allowed" : event.action === "EXIT" ? "Exit allowed" : event.message : event.message || "Denied"}</td>
+            <td className={event.code === "0000" ? styles.successResult : styles.deniedResult}>{event.deviceNumber === "MANUAL" && event.action === "EXIT" ? manualExitResult(event.message) : event.code === "0000" ? event.action === "ENTRY" ? "Entry allowed" : event.action === "EXIT" ? "Exit allowed" : event.message : event.message || "Denied"}</td>
           </tr>) : <tr><td colSpan={10} className={styles.emptyTable}>No RFID / QR activity has been recorded yet.</td></tr>}</tbody>
         </table>
       </div>

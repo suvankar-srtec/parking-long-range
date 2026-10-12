@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { manualExitResult } from "@/lib/rfid-display";
 import { Spinner } from "./LoadingIndicator";
 import { useFeedback, useMutation } from "./FeedbackProvider";
 import styles from "./SupervisorHeadcount.module.css";
@@ -68,7 +69,7 @@ function popupTitle(event: PopupState) {
 }
 
 function eventResult(event: ScanEvent) {
-  if (event.deviceNumber === "MANUAL" && event.action === "EXIT") return event.message || "Manual exit";
+  if (event.deviceNumber === "MANUAL" && event.action === "EXIT") return manualExitResult(event.message);
   if (event.code === "0000") return event.action === "ENTRY" ? "Entry allowed" : event.action === "EXIT" ? "Exit allowed" : event.message;
   return event.message || "Denied";
 }
@@ -204,7 +205,7 @@ export default function SupervisorHeadcount({
     {popup && showLiveDashboard && showActivity ? <div className={`${styles.scanPopup} ${styles[popup.tone]}`} role="status" aria-live="polite">
       <button type="button" className={styles.popupClose} aria-label="Close notification" onClick={() => setPopup(null)}>×</button>
       <div className={styles.popupIcon} aria-hidden="true">{popup.tone === "entry" ? "IN" : popup.tone === "exit" ? "OUT" : popup.tone === "denied" ? "!" : "RF"}</div>
-      <div className={styles.popupBody}><span className={styles.popupEyebrow}>LIVE RFID EVENT</span><h3>{popupTitle(popup)}</h3><p>{popup.message}</p><div className={styles.popupMeta}><span><strong>Vehicle</strong>{popup.vehicle?.plateNumber || "Unknown"}</span><span><strong>Rider</strong>{popup.vehicle?.ownerName || "Unknown"}</span><span><strong>Company</strong>{popup.company?.name || "-"}</span><span><strong>RFID</strong>{popup.cardNo}</span></div></div>
+      <div className={styles.popupBody}><span className={styles.popupEyebrow}>LIVE RFID EVENT</span><h3>{popupTitle(popup)}</h3><p>{popup.deviceNumber === "MANUAL" && popup.action === "EXIT" ? manualExitResult(popup.message) : popup.message}</p><div className={styles.popupMeta}><span><strong>Vehicle</strong>{popup.vehicle?.plateNumber || "Unknown"}</span><span><strong>Rider</strong>{popup.vehicle?.ownerName || "Unknown"}</span><span><strong>Company</strong>{popup.company?.name || "-"}</span><span><strong>RFID</strong>{popup.cardNo}</span></div></div>
     </div> : null}
 
     {metricCount > 0 ? <section className={`portfolio-card ${styles.headcount}`}>
