@@ -66,7 +66,7 @@ export default function SidebarReaderStatus({
       const cloudInput = (reader.readerProtocol === "CLOUD_C" || reader.name?.startsWith("Cloud C "))
         && /-[AB]$/.test(reader.deviceNumber);
       const label = cloudInput
-        ? reader.deviceNumber.endsWith("-A") ? "Reader A (IN/WG1)" : "Reader B (OUT/WG2)"
+        ? `${reader.deviceNumber} (${reader.deviceNumber.endsWith("-A") ? "IN/WG1" : "OUT/WG2"})`
         : reader.name || "Reader";
       return <div className="sidebar-reader-item" key={reader.id} title={online ? "Heartbeat active" : "Heartbeat unavailable"}>
         <i className={online ? "online" : "offline"} aria-hidden="true" />
