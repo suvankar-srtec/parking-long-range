@@ -54,6 +54,15 @@ export function cardCommand(index: number, card: string, timezone: number, now: 
 
 }
 
+export function revokeCardCommand(index: number, card: string, now: Date, until: Date, utcOffsetMinutes = 0) {
+  // C1 is an upsert: a missing/deleted slot can still be safely revoked.
+  // Zero time-zone permissions deny access without depending on deletion success.
+  const frame = Buffer.from(cardCommand(index, card, 0, now, until, utcOffsetMinutes), "hex");
+  const data = Buffer.from(frame.subarray(7, frame.length - 2));
+  data.writeUInt16LE(0, 38);
+  return memoryFrame(0xc1, data);
+}
+
 export function deleteCardCommand(index: number) {
 
   if (!Number.isInteger(index) || index < 0 || index >= 60000) throw new Error("Invalid card slot");

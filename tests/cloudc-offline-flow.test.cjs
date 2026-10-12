@@ -65,11 +65,12 @@ test("Disabling sync supersedes queued grants and preserves revocations across r
   await f.planOffline(f.tx,f.serial,true);
   let pending=f.state.commands.filter(c=>c.status==="PENDING");
   assert.equal(pending.length,1);
-  assert.equal(Buffer.from(pending[0].frame,"hex")[2],0x15);
+  assert.equal(Buffer.from(pending[0].frame,"hex")[2],0xc1);
+  assert.equal(Buffer.from(pending[0].frame,"hex").readUInt16LE(45),0);
   await f.planOffline(f.tx,f.serial,true);
   pending=f.state.commands.filter(c=>c.status==="PENDING");
   assert.equal(pending.length,1);
-  assert.equal(Buffer.from(pending[0].frame,"hex").readUInt32BE(7),100);
+  assert.equal(Buffer.from(pending[0].frame,"hex").readUIntLE(7,3),100);
 });
 
 test("Changing an input to registration revokes stored permissions rather than granting access", async () => {
@@ -78,7 +79,8 @@ test("Changing an input to registration revokes stored permissions rather than g
   await f.planOffline(f.tx,f.serial,true);
   const pending=f.state.commands.filter(c=>c.status==="PENDING");
   assert.equal(pending.length,1);
-  assert.equal(Buffer.from(pending[0].frame,"hex")[2],0x15);
+  assert.equal(Buffer.from(pending[0].frame,"hex")[2],0xc1);
+  assert.equal(Buffer.from(pending[0].frame,"hex").readUInt16LE(45),0);
   assert.match(f.state.config.lastError,/paused/);
 });
 

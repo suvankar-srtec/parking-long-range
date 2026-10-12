@@ -8,7 +8,7 @@ import { prisma } from "@/lib/prisma";
 
 import { parseGateConfig, gateReaderDirection } from "@/lib/gate-config";
 
-import { cardCommand, deleteCardCommand, timezoneCommand, historyIdentity } from "@/lib/cloudc-memory-protocol";
+import { cardCommand, revokeCardCommand, timezoneCommand, historyIdentity } from "@/lib/cloudc-memory-protocol";
 
 
 
@@ -77,7 +77,7 @@ export async function planOffline(tx: Prisma.TransactionClient, serial: string, 
 
   if (cards.length > config.slotCount) throw new ParkingError("Offline card capacity exceeded; the reserved range is too small.");
 
-  const fingerprint = digest(JSON.stringify(["native-apb-v1", buildingId, config.enabled, cards]));
+  const fingerprint = digest(JSON.stringify(["native-apb-revocation-v2", buildingId, config.enabled, cards]));
 
   const renew = config.enabled && (!config.plannedAt || now.getTime() - config.plannedAt.getTime() > 3600_000);
 
@@ -115,9 +115,10 @@ export async function planOffline(tx: Prisma.TransactionClient, serial: string, 
 
   }
 
-  const frames = old.filter(s => !cards.includes(s.card)).map(s => deleteCardCommand(s.index));
-
   const until = new Date(now.getTime() + 24 * 3600_000);
+
+  const frames = old.filter(s => !cards.includes(s.card))
+    .map(s => revokeCardCommand(s.index, s.card, now, until, config.utcOffsetMinutes));
 
   if (desired.length) {
 

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { cardCommand, deleteCardCommand, timezoneCommand, historyIdentity } from "../src/lib/cloudc-memory-protocol.ts";
+import { cardCommand, deleteCardCommand, revokeCardCommand, timezoneCommand, historyIdentity } from "../src/lib/cloudc-memory-protocol.ts";
 
 test("Card and deletion frames exactly match vendor Python SDK", () => {
   const frame = cardCommand(100, "8336774", 0, new Date("2026-10-10T07:30:00Z"), new Date("2026-10-11T07:30:00Z"), 330);
@@ -39,4 +39,13 @@ test("Firmware date variants and missing dates retain controller history", () =>
   assert.equal(historyIdentity({...packet,EventTime:"firmware-specific"}).time,null);
   assert.equal(historyIdentity(packet).key,historyIdentity({...packet}).key);
   assert.notEqual(historyIdentity(packet).key,historyIdentity({...packet,Card:"7975728"}).key);
+});
+
+test("Revocation writes zero permissions even when the controller slot was cleared", () => {
+  const frame = Buffer.from(revokeCardCommand(10000, "8336774", new Date("2026-10-12T07:00:00Z"), new Date("2026-10-13T07:00:00Z")), "hex");
+  assert.equal(frame[2],0xc1);
+  assert.equal(frame.readUIntLE(7,3),10000);
+  assert.equal(frame.readUInt32LE(10),8336774);
+  assert.equal(frame.readUInt16LE(45),0);
+  assert.equal(frame.reduce((a,b)=>a^b,0),3);
 });
