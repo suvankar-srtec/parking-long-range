@@ -93,6 +93,7 @@ export default function ReaderConsole({ compact = false }: { compact?: boolean }
   const [registrationQr, setRegistrationQr] = useState("");
   const [entryExitQr, setEntryExitQr] = useState("");
   const [revision, setRevision] = useState(0);
+  const [deviceSearch, setDeviceSearch] = useState("");
   const { notify } = useFeedback();
   const { pending, execute } = useMutation();
 
@@ -256,7 +257,23 @@ export default function ReaderConsole({ compact = false }: { compact?: boolean }
     });
   }
 
-  function renderReader(reader: Reader) {
+  function renderReader(reader: Reader, controllerInput = false) {
+    if (controllerInput) {
+      const state = error ? { tone: "unknown", label: "Unavailable" } : readerStatus(reader);
+      const input = reader.deviceNumber.endsWith("-A") ? "A" : "B";
+      return <article className="controller-input-row" key={reader.id}>
+        <div className="controller-input-identity"><span className="controller-input-letter">{input}</span>
+          <div><h3>Reader {input} <small>{input === "A" ? "IN / WG1" : "OUT / WG2"}</small></h3>
+            <span className="controller-input-device">{reader.deviceNumber}</span></div></div>
+        <div className="controller-input-purpose"><span>{modeLabel(normalizedMode(reader.mode))}</span>
+          <small><i className={"reader-dot " + state.tone} />{state.label}{!reader.enabled ? " ? Disabled" : ""}</small></div>
+        <div className="controller-input-actions">
+          {(data!.canConfigureReaders || data!.canAssignReaders) && <button type="button" className="controller-action" onClick={() => openConfigure(reader)} aria-label={`Configure reader ${reader.deviceNumber}`}>Configure</button>}
+          {data!.canRemoveReaders && <button type="button" className="controller-action controller-action-remove" disabled={pending} onClick={() => removeReader(reader)} aria-label={`Remove reader ${reader.deviceNumber}`}>Remove</button>}
+        </div>
+      </article>;
+    }
+
 
           const state = error ? { tone: "unknown", label: "Status unavailable" } : readerStatus(reader);
           return <article className="reader-card" key={reader.id}>
@@ -284,17 +301,23 @@ export default function ReaderConsole({ compact = false }: { compact?: boolean }
     groups.set(key, group);
   }
 
+  const visibleGroups = [...groups.entries()].filter(([, group]) => !deviceSearch.trim()
+    || group.readers.some(reader => [group.serial, reader.deviceNumber, reader.name, reader.readerIp, reader.building?.name]
+      .some(value => value?.toLowerCase().includes(deviceSearch.trim().toLowerCase()))));
+
   const editingQr = editingMode === "REGISTER" ? registrationQr : entryExitQr;
 
   return <>
     <section className="portfolio-card">
-      <div className="reader-toolbar reader-toolbar-top">
+      <div className="reader-toolbar reader-toolbar-top controller-toolbar">
+        <div className="controller-toolbar-title"><h2>Controllers &amp; readers</h2><span>{[...groups.values()].filter(group => group.serial).length} controllers ? {data?.readers.length ?? 0} readers</span></div>
+        <input className="controller-search" type="search" aria-label="Search controllers or readers" placeholder="Search controller or reader" value={deviceSearch} onChange={event => setDeviceSearch(event.target.value)} />
         {data?.canAddReaders && <button className="secondary-button" type="button" onClick={openAddReader}>+ Add reader</button>}
         <strong>{activity.inside} vehicles inside</strong>
       </div>
 
-      {!data ? <p><Spinner /> Loading readers…</p> : <div className="reader-grid">
-        {[...groups.entries()].map(([key, group]) => {
+      {!data ? <p><Spinner /> Loading readers…</p> : <div className="reader-grid controller-grid">
+        {visibleGroups.map(([key, group]) => {
           if (!group.serial) return renderReader(group.readers[0]);
           const newest = [...group.readers].sort((a, b) =>
             (Date.parse(b.lastSeenAt || "") || 0) - (Date.parse(a.lastSeenAt || "") || 0))[0];
@@ -303,14 +326,16 @@ export default function ReaderConsole({ compact = false }: { compact?: boolean }
             : readerStatus({ ...newest, enabled: true, buildingId: undefined });
           return <section key={key} className="controller-card" aria-label={`Controller ${group.serial}`}>
             <header className="controller-card-head">
-              <div><div className="section-kicker">CONTROLLER</div><h2>Cloud C {group.serial}</h2>
-                <p>{newest.readerIp || "IP not detected"}</p></div>
-              <div><div className="reader-line"><i className={"reader-dot " + state.tone} />{state.label}</div>
-                <p>{group.readers.length} reader inputs</p></div>
+              <div className="controller-heading"><span className="controller-icon" aria-hidden="true">?</span><div><h2>Cloud C <span>{group.serial}</span></h2>
+                <p>{newest.readerIp || "IP not detected"} ? {group.readers.length} inputs</p></div></div>
+              <span className={"controller-status " + state.tone}><i className={"reader-dot " + state.tone} />{state.label}</span>
             </header>
-            <div className="controller-reader-grid">{group.readers.map(renderReader)}</div>
+            <div className="controller-reader-grid">{group.readers.map(reader => renderReader(reader, true))}</div>
+            <footer className="controller-card-footer"><span>{[...new Set(group.readers.map(reader => reader.building?.name || data!.buildings.find(building => building.id === reader.buildingId)?.name || "Unassigned"))].join(" ? ")}</span>
+              <span>Last contact {newest.lastSeenAt ? new Date(newest.lastSeenAt).toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", hour12: true }) + " IST" : "?"}</span></footer>
           </section>;
         })}
+        {!visibleGroups.length && <p className="muted">{deviceSearch ? "No controllers or readers match your search." : "No readers configured."}</p>}
       </div>}
     </section>
 
@@ -451,11 +476,19 @@ export default function ReaderConsole({ compact = false }: { compact?: boolean }
     </div>}
 
     <style>{`
-      .controller-card{grid-column:1/-1;border:1px solid #d4ded8;border-radius:10px;padding:16px;background:#f8fbff;min-width:0}
-      .controller-card-head{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid #dce5ec}
-      .controller-card-head h2{margin:4px 0;font-size:20px}.controller-card-head p{margin:5px 0;color:#6c7c87;font-size:12px}
-      .controller-reader-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.controller-reader-grid .reader-card{background:#fff;min-width:0}
-      @media(max-width:760px){.controller-reader-grid{grid-template-columns:1fr}}
+      .controller-toolbar{gap:12px;margin-bottom:18px}.controller-toolbar-title{margin-right:auto}.controller-toolbar-title h2{font-size:16px;margin:0 0 3px}.controller-toolbar-title span{color:#768699;font-size:11px}.controller-search{width:230px;max-width:100%;padding:8px 10px;border:1px solid #d5dfeb;border-radius:7px;background:#fff;font-size:12px}
+      .controller-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,440px),1fr));gap:14px}
+      .controller-card{border:1px solid #dbe4ef;border-radius:10px;background:#fff;min-width:0;overflow:hidden;box-shadow:0 2px 6px rgba(20,48,80,.035)}
+      .controller-card-head{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:13px 15px;background:#f7faff;border-bottom:1px solid #e4ebf3}
+      .controller-heading{display:flex;align-items:center;gap:10px;min-width:0}.controller-icon{display:grid;place-items:center;width:34px;height:34px;border:1px solid #d7e5f5;border-radius:8px;background:#edf4fe;color:#246ac2;font-size:23px}
+      .controller-card-head h2{margin:0;font-size:14px;font-weight:750}.controller-card-head h2 span{font-weight:600}.controller-card-head p{margin:4px 0 0;color:#78869a;font-size:10px}
+      .controller-status{display:inline-flex;align-items:center;gap:5px;padding:4px 7px;border-radius:6px;font-size:10px;white-space:nowrap;background:#f0f4f8;color:#64748b}.controller-status.online{background:#ecf8f2;color:#168453}.controller-status.offline{background:#fff0f0;color:#bf4141}
+      .controller-reader-grid{display:grid;grid-template-columns:1fr}.controller-input-row{display:grid;grid-template-columns:minmax(125px,1fr) minmax(100px,.8fr) auto;align-items:center;gap:10px;padding:13px 15px;border-bottom:1px solid #edf1f6}.controller-input-row:last-child{border-bottom:0}
+      .controller-input-identity{display:flex;align-items:center;gap:8px;min-width:0}.controller-input-letter{display:grid;place-items:center;flex-shrink:0;width:27px;height:27px;border-radius:6px;background:#eef3fa;color:#3d628d;font-size:12px;font-weight:750}.controller-input-identity h3{font-size:12px;margin:0 0 3px}.controller-input-identity h3 small{font-size:9px;font-weight:400;color:#8793a4;margin-left:3px}.controller-input-device{color:#8692a3;font-size:10px}
+      .controller-input-purpose{display:grid;gap:4px;font-size:11px;color:#3d536e}.controller-input-purpose small{display:flex;align-items:center;gap:4px;font-size:9px;color:#8491a2}.controller-input-purpose .reader-dot,.controller-status .reader-dot{width:6px;height:6px}
+      .controller-input-actions{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}.controller-action{border:1px solid #d6e2f1;border-radius:5px;padding:5px 7px;background:#f7faff;color:#33629a;cursor:pointer;font-size:10px}.controller-action:hover{background:#edf4ff;border-color:#a6c1e3}.controller-action-remove{color:#8b6d77;background:#fff;border-color:#e5dfe3}.controller-action:disabled{opacity:.5;cursor:wait}
+      .controller-card-footer{display:flex;justify-content:space-between;gap:8px;padding:8px 15px;background:#fbfcfe;border-top:1px solid #edf1f6;color:#8a97a7;font-size:9px}
+      @media(max-width:560px){.controller-toolbar-title{width:100%}.controller-search{flex:1}.controller-input-row{grid-template-columns:1fr auto;gap:8px}.controller-input-purpose{grid-column:1;grid-row:2;padding-left:35px}.controller-input-actions{grid-column:2;grid-row:1/3}.controller-card-head,.controller-input-row{padding:11px}.controller-card-footer{padding:8px 11px}}
       .reader-toolbar,.reader-card-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
       .reader-toolbar-top{justify-content:flex-end;margin-bottom:12px}
       .reader-modal-backdrop{padding:12px}
