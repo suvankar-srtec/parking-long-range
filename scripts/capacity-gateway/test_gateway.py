@@ -34,3 +34,23 @@ class CapacityTests(unittest.TestCase):
   for card in self.manifest['cards'][:2]:card.update(pool='company',companyId='c')
   self.ledger.snapshot(self.manifest);self.assertTrue(self.entry(1,2000)['allowed']);self.assertFalse(self.entry(2,4000)['allowed'])
 if __name__=='__main__':unittest.main()
+
+class GatewayReplyTests(unittest.TestCase):
+ setUp=CapacityTests.setUp
+ tearDown=CapacityTests.tearDown
+ def test_allowed_entry_exit_and_heartbeat_have_complete_http_framing(self):
+  import json,threading,http.client
+  from http.server import ThreadingHTTPServer
+  from gateway import Gateway
+  gateway=Gateway({'database':str(self.db),'serial':'test','controller_ip':'127.0.0.1','controller_token':'synthetic-token'})
+  server=ThreadingHTTPServer(('127.0.0.1',0),gateway.handler());thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start()
+  try:
+   def send(path,packet):
+    conn=http.client.HTTPConnection('127.0.0.1',server.server_port,timeout=2)
+    conn.request('POST',path+'?token=synthetic-token',json.dumps(packet),{'Content-Type':'application/json'})
+    response=conn.getresponse();raw=response.read();self.assertEqual(response.status,200);self.assertEqual(response.version,11);self.assertEqual(int(response.getheader('Content-Length')),len(raw));conn.close();return json.loads(raw.decode().removeprefix('DATA='))
+   for reader in ['0','1']:
+    result=send('/api/AcsDataApi/RequestCardEvent',{'Serial':'test','type':'0','Reader':reader,'Card':'1'})
+    self.assertEqual(result['AcsRes'],'1');self.assertEqual(result['ActIndex'],reader);self.assertEqual(result['Time'],'1')
+   self.assertEqual(send('/api/AcsDataApi/RequestStatus',{'Serial':'test','Key':'123'})['Key'],'123')
+  finally:server.shutdown();server.server_close();thread.join()

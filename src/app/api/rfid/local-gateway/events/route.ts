@@ -10,6 +10,11 @@ export async function POST(request: Request) {
   const reader = await prisma.rfidReader.findUnique({ where: { deviceNumber: serial + "-A" } });
   if (!reader?.buildingId || reader.readerProtocol !== "CLOUD_C") throw new ParkingError("Controller is not assigned.", 403);
   const buildingId = reader.buildingId;
+  const contact = new Date(body.contactAt);
+  if (Number.isFinite(contact.getTime()) && Math.abs(Date.now() - contact.getTime()) < 300000) await prisma.rfidReader.updateMany({
+    where: { deviceNumber: { in: [serial + "-A", serial + "-B"] }, OR: [{ lastSeenAt: null }, { lastSeenAt: { lt: contact } }] }, data: { lastSeenAt: contact, connectionType: "HTTP", heartbeatSeconds: 5 } });
+  // Heartbeat-only uploads never wait for scan reconciliation locks.
+  if (!body.events.length) return NextResponse.json({ ok: true, acknowledged: [] });
   const acknowledged = await prisma.$transaction(async tx => {
     await lockRfid(tx); await lockBuildingParking(tx, buildingId); const ids: string[] = [];
     for (const record of body.events) {
@@ -34,9 +39,6 @@ export async function POST(request: Request) {
     }
     return ids;
   }, { maxWait: 10000, timeout: 25000 });
-  const contact = new Date(body.contactAt);
-  if (Number.isFinite(contact.getTime()) && Math.abs(Date.now() - contact.getTime()) < 300000) await prisma.rfidReader.updateMany({
-    where: { deviceNumber: { in: [serial + "-A", serial + "-B"] }, OR: [{ lastSeenAt: null }, { lastSeenAt: { lt: contact } }] }, data: { lastSeenAt: contact, connectionType: "HTTP", heartbeatSeconds: 5 } });
   return NextResponse.json({ ok: true, acknowledged });
  } catch (error) { return rfidApiError(error); }
 }

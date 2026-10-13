@@ -91,6 +91,16 @@ class Gateway:
         if not controller:headers['x-gateway-token']=self.config['gateway_token']
         request=urllib.request.Request(self.config['cloud_base']+path,data=None if data is None else json.dumps(data).encode(),headers=headers)
         with urllib.request.urlopen(request,timeout=15) as response:return response.read()
+    def heartbeat(self):
+        # Do not let queued scan uploads or manifest refreshes delay contact reports.
+        while not self.stop.is_set():
+            if self.contact:
+                try:
+                    result=json.loads(self.cloud('/api/rfid/local-gateway/events',{'events':[],'contactAt':self.contact}))
+                    if not result.get('ok'):raise ValueError('Heartbeat rejected')
+                except Exception as error:
+                    logging.warning('Cloud heartbeat unavailable (%s)',type(error).__name__)
+            self.stop.wait(5)
     def sync(self):
         while not self.stop.is_set():
             try:
@@ -111,15 +121,22 @@ class Gateway:
         gateway=self
         class Handler(BaseHTTPRequestHandler):
             def log_message(self,*args):pass
+            protocol_version='HTTP/1.1'
+            def reply(self,raw,status=200,content_type='text/plain'):
+                self.send_response(status);self.send_header('Content-Type',content_type)
+                self.send_header('Content-Length',str(len(raw)));self.send_header('Cache-Control','no-store')
+                self.send_header('Connection','close');self.end_headers();self.wfile.write(raw);self.wfile.flush()
+                self.close_connection=True
+
             def do_GET(self):
                 if self.path=='/health':
-                    self.send_response(200);self.send_header('Content-Type','application/json');self.end_headers();self.wfile.write(json.dumps({'ok':True,'cloudError':gateway.last_sync_error,'queued':len(gateway.ledger.pending(gateway.config['serial'])),'controllerContact':gateway.contact}).encode());return
+                    self.reply(json.dumps({'ok':True,'cloudError':gateway.last_sync_error,'queued':len(gateway.ledger.pending(gateway.config['serial'])),'controllerContact':gateway.contact}).encode(),content_type='application/json');return
                 self.do_POST()
             def do_POST(self):
                 try:
                     path=urllib.parse.urlsplit(self.path);query=urllib.parse.parse_qs(path.query)
-                    if not hmac.compare_digest(query.get('token',[''])[0],gateway.config['controller_token']):self.send_response(403);self.end_headers();return
-                    if self.client_address[0]!=gateway.config['controller_ip']:self.send_response(403);self.end_headers();return
+                    if not hmac.compare_digest(query.get('token',[''])[0],gateway.config['controller_token']):self.reply(b'',403);return
+                    if self.client_address[0]!=gateway.config['controller_ip']:self.reply(b'',403);return
                     size=int(self.headers.get('Content-Length','0'))
                     if size>4096:raise ValueError('Oversized packet')
                     packet=json.loads(self.rfile.read(size)) if size else {k:v[0] for k,v in query.items()}
@@ -130,18 +147,18 @@ class Gateway:
                         fields={'Key':str(packet['Key'])}
                     elif str(packet.get('type',packet.get('Type',''))) in ['100','101']:
                         raw=gateway.cloud('/api/AcsDataApi/RequestCardEvent?'+urllib.parse.urlencode({'token':gateway.config['controller_token']}),packet,True)
-                        self.send_response(200);self.send_header('Content-Type','text/plain');self.end_headers();self.wfile.write(raw);return
+                        self.reply(raw);return
                     elif str(packet.get('type',packet.get('Type','')))=='0' and str(packet.get('Reader')) in ['0','1']:
                         if gateway.ledger.direction(gateway.config['serial'],str(packet['Reader']))=='REGISTER':
                             raw=gateway.cloud('/api/AcsDataApi/RequestCardEvent?'+urllib.parse.urlencode({'token':gateway.config['controller_token']}),packet,True)
-                            self.send_response(200);self.send_header('Content-Type','text/plain');self.end_headers();self.wfile.write(raw);return
+                            self.reply(raw);return
                         result=gateway.ledger.scan(gateway.config['serial'],str(packet['Reader']),str(packet.get('Card','')))
                         fields={'AcsRes':'1' if result['allowed'] else '0','Reader':str(packet['Reader']),'ActIndex':str(packet['Reader']),'Time':'1','Card':str(packet.get('Card','')),'Note':result['message'][:31]}
                     else:fields={'AcsRes':'0'}
-                    self.send_response(200);self.send_header('Content-Type','text/plain');self.end_headers();self.wfile.write(('DATA='+json.dumps(fields,separators=(',',':'))).encode())
+                    self.reply(('DATA='+json.dumps(fields,separators=(',',':'))).encode())
                 except Exception as error:
                     logging.warning('Gateway request failed (%s)',type(error).__name__)
-                    try:self.send_response(200);self.end_headers();self.wfile.write(b'DATA={"AcsRes":"0"}')
+                    try:self.reply(b'DATA={"AcsRes":"0"}')
                     except OSError:pass
         return Handler
 
@@ -149,7 +166,7 @@ def main():
     parser=argparse.ArgumentParser();parser.add_argument('--config',required=True);args=parser.parse_args()
     config=json.loads(pathlib.Path(args.config).read_text(encoding='utf-8-sig'))
     logging.basicConfig(level=logging.INFO,format='%(asctime)s %(message)s',filename=config.get('log'))
-    gateway=Gateway(config);threading.Thread(target=gateway.sync,daemon=True).start()
+    gateway=Gateway(config);threading.Thread(target=gateway.sync,daemon=True).start();threading.Thread(target=gateway.heartbeat,daemon=True).start()
     server=ThreadingHTTPServer((config.get('bind','0.0.0.0'),config.get('port',8765)),gateway.handler())
     if config.get('certificate'):
         context=ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER);context.minimum_version=ssl.TLSVersion.TLSv1_2
