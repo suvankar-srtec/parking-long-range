@@ -6,7 +6,7 @@ import { rfidUser, rfidApiError } from "@/lib/rfid-access";
 export async function GET(request: Request) {
   try {
     const user = await rfidUser();
-  if (user.role === "BUILDING_ADMIN" && !canUsePermission(user, "building.liveMonitor")) return NextResponse.json({ ok: false, message: "Live monitoring is not allowed for this account." }, { status: 403 });
+  if (user.role === "BUILDING_ADMIN" && !canUsePermission(user, "building.liveMonitor") && !(new URL(request.url).searchParams.get("summary") === "1" && canUsePermission(user, "building.configureReaders"))) return NextResponse.json({ ok: false, message: "Live monitoring is not allowed for this account." }, { status: 403 });
     const scope = user.role === "SUPER_ADMIN"
       ? {}
       : user.role === "COMPANY_ADMIN"

@@ -1,3 +1,4 @@
+import { hasPermission } from "@/lib/permissions";
 import { NextResponse } from "next/server";
 import { historyIdentity } from "@/lib/cloudc-memory-protocol";
 import { prisma } from "@/lib/prisma";
@@ -8,13 +9,13 @@ import { isPrimarySuperAdmin } from "@/lib/super-admin-scope";
 export async function GET(request: Request) {
   try {
     const user = await rfidUser();
-    if (user.role !== "SUPER_ADMIN") throw new ParkingError("Controller history is available to Super Admin only.", 403);
+    if (user.role !== "SUPER_ADMIN" && !(user.role === "BUILDING_ADMIN" && user.buildingId && hasPermission(user, "building.offlineSync"))) throw new ParkingError("Controller history is not available to this account.", 403);
     const params = new URL(request.url).searchParams;
     const serial = params.get("serial");
     const cursor = params.get("cursor");
     if (cursor && !/^cloudc-history-[a-f0-9]{64}$/.test(cursor)) throw new ParkingError("Invalid history cursor.");
     const readers = await prisma.rfidReader.findMany({
-      where: { readerProtocol: "CLOUD_C", ...(isPrimarySuperAdmin(user) ? {} : { building: { superAdminId: user.id } }) },
+      where: { readerProtocol: "CLOUD_C", ...(user.role === "BUILDING_ADMIN" ? { buildingId: user.buildingId! } : isPrimarySuperAdmin(user) ? {} : { building: { superAdminId: user.id } }) },
       select: { deviceNumber: true },
     });
     const serials = [...new Set(readers.filter(r => /-[AB]$/.test(r.deviceNumber)).map(r => r.deviceNumber.slice(0, -2)))];

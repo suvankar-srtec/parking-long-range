@@ -1,6 +1,7 @@
 import type { UserRole } from "@prisma/client";
 
 export const PERMISSION_KEYS = [
+  "building.offlineSync",
   "building.manageCompanyAccounts",
   "supervisor.requestManualExit",
   "company.manageVisitors",
@@ -42,6 +43,7 @@ export type PermissionOption = {
 };
 
 const BUILDING_ADMIN_PERMISSIONS: PermissionOption[] = [
+  { key: "building.offlineSync", label: "Offline Sync", description: "View uploaded controller records for this building." },
   { key: "building.manageCompanyAccounts", label: "Manage company accounts", description: "Enable or disable companies and update their account passwords." },
   { key: "building.configureGates", label: "Configure gates", description: "Assign entry and exit readers to building gates." },
   { key: "building.registerCompanyCards", label: "Register company cards", description: "Register RFID cards for company vehicles in this building." },
