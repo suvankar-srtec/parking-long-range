@@ -73,3 +73,29 @@ class GatewayReplyTests(unittest.TestCase):
    self.assertTrue(first.wait(1));client=http.client.HTTPConnection(*server.server_address,timeout=1)
    client.request('GET','/health');response=client.getresponse();self.assertEqual(response.status,200);response.read();client.close()
   finally:stalled.close();release.set();server.shutdown();server.server_close();thread.join()
+
+ def test_scan_wakes_uploader_without_waiting_for_poll_or_configuration(self):
+  import threading,json
+  from gateway import Gateway
+  gateway=Gateway({'database':str(self.db),'serial':'test'});sent=threading.Event();paths=[]
+  def cloud(path,data):
+   paths.append(path);sent.set();return json.dumps({'ok':True,'acknowledged':[record['id'] for record in data['events']]}).encode()
+  gateway.cloud=cloud;worker=threading.Thread(target=gateway.sync,daemon=True);worker.start()
+  try:
+   self.ledger.scan('test','0','1',self.now);gateway.scan_ready.set();self.assertTrue(sent.wait(1))
+  finally:gateway.stop.set();gateway.scan_ready.set();worker.join(1)
+  self.assertEqual(paths,['/api/rfid/local-gateway/events']);self.assertEqual(self.ledger.pending('test'),[])
+ def test_http_connection_can_be_reused_for_entry_and_exit(self):
+  import threading,http.client,json
+  from http.server import ThreadingHTTPServer
+  from gateway import Gateway
+  gateway=Gateway({'database':str(self.db),'serial':'test','controller_ip':'127.0.0.1','controller_token':'test-token'})
+  server=ThreadingHTTPServer(('127.0.0.1',0),gateway.handler());worker=threading.Thread(target=server.serve_forever,daemon=True);worker.start();client=http.client.HTTPConnection(*server.server_address,timeout=2)
+  try:
+   saved_socket=None
+   for reader in ['0','1']:
+    client.request('POST','/api/AcsDataApi/RequestCardEvent?token=test-token',json.dumps({'Serial':'test','type':'0','Reader':reader,'Card':'1'}),{'Content-Type':'application/json'})
+    response=client.getresponse();result=json.loads(response.read().decode().removeprefix('DATA='));self.assertEqual(result['AcsRes'],'1');self.assertEqual(response.getheader('Connection'),'keep-alive')
+    if saved_socket is None:saved_socket=client.sock
+    else:self.assertIs(client.sock,saved_socket)
+  finally:client.close();server.shutdown();server.server_close();worker.join()

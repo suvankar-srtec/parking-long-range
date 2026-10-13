@@ -85,7 +85,7 @@ class Ledger:
 
 class Gateway:
     def __init__(self,config):
-        self.config=config;self.ledger=Ledger(config['database']);self.contact=None;self.stop=threading.Event();self.last_sync_error=None;self.last_scan_reply=None
+        self.config=config;self.ledger=Ledger(config['database']);self.contact=None;self.stop=threading.Event();self.last_sync_error=None;self.last_scan_reply=None;self.scan_ready=threading.Event();self.last_config_error=None
     def cloud(self,path,data=None,controller=False):
         headers={'Content-Type':'application/json'}
         if not controller:headers['x-gateway-token']=self.config['gateway_token']
@@ -101,22 +101,34 @@ class Gateway:
                 except Exception as error:
                     logging.warning('Cloud heartbeat unavailable (%s)',type(error).__name__)
             self.stop.wait(5)
-    def sync(self):
+    def refresh(self):
         while not self.stop.is_set():
             try:
-                pending=self.ledger.pending(self.config['serial'])
-                result=json.loads(self.cloud('/api/rfid/local-gateway/events',{'events':pending,'contactAt':self.contact}))
-                if not result.get('ok'):raise ValueError('Cloud synchronization rejected')
-                acknowledged=set(result.get('acknowledged',[])) & {r['id'] for r in pending};self.ledger.acknowledge(acknowledged)
                 if not self.ledger.pending(self.config['serial']):
                     m=json.loads(self.cloud('/api/rfid/local-gateway/config'))
                     if not m.get('ok') or m['serial']!=self.config['serial']:raise ValueError('Invalid controller configuration')
                     self.ledger.snapshot(m)
-                self.last_sync_error=None
+                    self.last_config_error=None
+            except Exception as error:
+                self.last_config_error=type(error).__name__
+                logging.warning('Cloud configuration unavailable (%s)',type(error).__name__)
+            self.stop.wait(5)
+    def sync(self):
+        while not self.stop.is_set():
+            self.scan_ready.clear()
+            try:
+                pending=self.ledger.pending(self.config['serial'])
+                if pending:
+                    result=json.loads(self.cloud('/api/rfid/local-gateway/events',{'events':pending,'contactAt':self.contact}))
+                    if not result.get('ok'):raise ValueError('Cloud synchronization rejected')
+                    acknowledged=set(result.get('acknowledged',[])) & {r['id'] for r in pending}
+                    self.ledger.acknowledge(acknowledged)
+                    if acknowledged and self.ledger.pending(self.config['serial']):self.scan_ready.set()
+                    self.last_sync_error=None
             except Exception as error:
                 self.last_sync_error=type(error).__name__
                 logging.warning('Cloud unavailable (%s); retaining local capacity ledger',type(error).__name__)
-            self.stop.wait(5)
+            self.scan_ready.wait(5)
     def handler(self):
         gateway=self
         class Handler(BaseHTTPRequestHandler):
@@ -125,12 +137,11 @@ class Gateway:
             def reply(self,raw,status=200,content_type='text/plain'):
                 self.send_response(status);self.send_header('Content-Type',content_type)
                 self.send_header('Content-Length',str(len(raw)));self.send_header('Cache-Control','no-store')
-                self.send_header('Connection','close');self.end_headers();self.wfile.write(raw);self.wfile.flush()
-                self.close_connection=True
+                self.send_header('Connection','close' if self.close_connection else 'keep-alive');self.end_headers();self.wfile.write(raw);self.wfile.flush()
 
             def do_GET(self):
                 if self.path=='/health':
-                    self.reply(json.dumps({'ok':True,'cloudError':gateway.last_sync_error,'queued':len(gateway.ledger.pending(gateway.config['serial'])),'controllerContact':gateway.contact,'lastScanReply':gateway.last_scan_reply}).encode(),content_type='application/json');return
+                    self.reply(json.dumps({'ok':True,'cloudError':gateway.last_sync_error,'configError':gateway.last_config_error,'queued':len(gateway.ledger.pending(gateway.config['serial'])),'controllerContact':gateway.contact,'lastScanReply':gateway.last_scan_reply}).encode(),content_type='application/json');return
                 self.do_POST()
             def do_POST(self):
                 started=time.monotonic()
@@ -159,6 +170,7 @@ class Gateway:
                     self.reply(('DATA='+json.dumps(fields,separators=(',',':'))).encode())
                     if str(packet.get('type',packet.get('Type','')))=='0':
                         gateway.last_scan_reply={'at':utc(),'reader':str(packet.get('Reader')),'allowed':fields.get('AcsRes')=='1','output':fields.get('ActIndex'),'seconds':fields.get('Time'),'elapsedMs':round((time.monotonic()-started)*1000,1),'reportedStatus':str(packet.get('Status',''))}
+                        gateway.scan_ready.set()
                         logging.info('Scan reply: reader=%s allowed=%s elapsedMs=%s status=%s',gateway.last_scan_reply['reader'],gateway.last_scan_reply['allowed'],gateway.last_scan_reply['elapsedMs'],gateway.last_scan_reply['reportedStatus'])
                 except Exception as error:
                     logging.warning('Gateway request failed (%s)',type(error).__name__)
@@ -182,7 +194,7 @@ def main():
     parser=argparse.ArgumentParser();parser.add_argument('--config',required=True);args=parser.parse_args()
     config=json.loads(pathlib.Path(args.config).read_text(encoding='utf-8-sig'))
     logging.basicConfig(level=logging.INFO,format='%(asctime)s %(message)s',filename=config.get('log'))
-    gateway=Gateway(config);threading.Thread(target=gateway.sync,daemon=True).start();threading.Thread(target=gateway.heartbeat,daemon=True).start()
+    gateway=Gateway(config);threading.Thread(target=gateway.sync,daemon=True).start();threading.Thread(target=gateway.heartbeat,daemon=True).start();threading.Thread(target=gateway.refresh,daemon=True).start()
     server_class=ConcurrentTLSServer if config.get('certificate') else ThreadingHTTPServer
     server=server_class((config.get('bind','0.0.0.0'),config.get('port',8765)),gateway.handler())
     if config.get('certificate'):
