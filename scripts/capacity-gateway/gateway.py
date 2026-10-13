@@ -85,7 +85,7 @@ class Ledger:
 
 class Gateway:
     def __init__(self,config):
-        self.config=config;self.ledger=Ledger(config['database']);self.contact=None;self.stop=threading.Event();self.last_sync_error=None
+        self.config=config;self.ledger=Ledger(config['database']);self.contact=None;self.stop=threading.Event();self.last_sync_error=None;self.last_scan_reply=None
     def cloud(self,path,data=None,controller=False):
         headers={'Content-Type':'application/json'}
         if not controller:headers['x-gateway-token']=self.config['gateway_token']
@@ -130,9 +130,10 @@ class Gateway:
 
             def do_GET(self):
                 if self.path=='/health':
-                    self.reply(json.dumps({'ok':True,'cloudError':gateway.last_sync_error,'queued':len(gateway.ledger.pending(gateway.config['serial'])),'controllerContact':gateway.contact}).encode(),content_type='application/json');return
+                    self.reply(json.dumps({'ok':True,'cloudError':gateway.last_sync_error,'queued':len(gateway.ledger.pending(gateway.config['serial'])),'controllerContact':gateway.contact,'lastScanReply':gateway.last_scan_reply}).encode(),content_type='application/json');return
                 self.do_POST()
             def do_POST(self):
+                started=time.monotonic()
                 try:
                     path=urllib.parse.urlsplit(self.path);query=urllib.parse.parse_qs(path.query)
                     if not hmac.compare_digest(query.get('token',[''])[0],gateway.config['controller_token']):self.reply(b'',403);return
@@ -156,21 +157,37 @@ class Gateway:
                         fields={'AcsRes':'1' if result['allowed'] else '0','Reader':str(packet['Reader']),'ActIndex':str(packet['Reader']),'Time':'1','Card':str(packet.get('Card','')),'Note':result['message'][:31]}
                     else:fields={'AcsRes':'0'}
                     self.reply(('DATA='+json.dumps(fields,separators=(',',':'))).encode())
+                    if str(packet.get('type',packet.get('Type','')))=='0':
+                        gateway.last_scan_reply={'at':utc(),'reader':str(packet.get('Reader')),'allowed':fields.get('AcsRes')=='1','output':fields.get('ActIndex'),'seconds':fields.get('Time'),'elapsedMs':round((time.monotonic()-started)*1000,1),'reportedStatus':str(packet.get('Status',''))}
+                        logging.info('Scan reply: reader=%s allowed=%s elapsedMs=%s status=%s',gateway.last_scan_reply['reader'],gateway.last_scan_reply['allowed'],gateway.last_scan_reply['elapsedMs'],gateway.last_scan_reply['reportedStatus'])
                 except Exception as error:
                     logging.warning('Gateway request failed (%s)',type(error).__name__)
                     try:self.reply(b'DATA={"AcsRes":"0"}')
                     except OSError:pass
         return Handler
 
+class ConcurrentTLSServer(ThreadingHTTPServer):
+    """Perform TLS negotiation in each worker, never in the accept loop."""
+    daemon_threads=True
+    def process_request_thread(self,request,client_address):
+        try:
+            request.settimeout(5)
+            secure=self.tls_context.wrap_socket(request,server_side=True)
+        except (OSError,ssl.SSLError):
+            request.close()
+            return
+        super().process_request_thread(secure,client_address)
+
 def main():
     parser=argparse.ArgumentParser();parser.add_argument('--config',required=True);args=parser.parse_args()
     config=json.loads(pathlib.Path(args.config).read_text(encoding='utf-8-sig'))
     logging.basicConfig(level=logging.INFO,format='%(asctime)s %(message)s',filename=config.get('log'))
     gateway=Gateway(config);threading.Thread(target=gateway.sync,daemon=True).start();threading.Thread(target=gateway.heartbeat,daemon=True).start()
-    server=ThreadingHTTPServer((config.get('bind','0.0.0.0'),config.get('port',8765)),gateway.handler())
+    server_class=ConcurrentTLSServer if config.get('certificate') else ThreadingHTTPServer
+    server=server_class((config.get('bind','0.0.0.0'),config.get('port',8765)),gateway.handler())
     if config.get('certificate'):
         context=ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER);context.minimum_version=ssl.TLSVersion.TLSv1_2
-        context.load_cert_chain(config['certificate'],config['private_key']);server.socket=context.wrap_socket(server.socket,server_side=True)
+        context.load_cert_chain(config['certificate'],config['private_key']);server.tls_context=context
     try:server.serve_forever()
     finally:gateway.stop.set();server.server_close()
 if __name__=='__main__':main()

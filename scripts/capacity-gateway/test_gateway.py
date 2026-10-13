@@ -54,3 +54,22 @@ class GatewayReplyTests(unittest.TestCase):
     self.assertEqual(result['AcsRes'],'1');self.assertEqual(result['ActIndex'],reader);self.assertEqual(result['Time'],'1')
    self.assertEqual(send('/api/AcsDataApi/RequestStatus',{'Serial':'test','Key':'123'})['Key'],'123')
   finally:server.shutdown();server.server_close();thread.join()
+
+ def test_slow_tls_negotiation_does_not_block_another_connection(self):
+  import threading,socket,http.client
+  from gateway import ConcurrentTLSServer,Gateway
+  first=threading.Event();release=threading.Event();lock=threading.Lock()
+  class SlowFirstTLS:
+   def __init__(self):self.calls=0
+   def wrap_socket(self,request,server_side):
+    with lock:self.calls+=1;number=self.calls
+    if number==1:first.set();release.wait(3)
+    return request
+  gateway=Gateway({'database':str(self.db),'serial':'test'})
+  server=ConcurrentTLSServer(('127.0.0.1',0),gateway.handler());server.tls_context=SlowFirstTLS()
+  thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start()
+  stalled=socket.create_connection(server.server_address,timeout=1)
+  try:
+   self.assertTrue(first.wait(1));client=http.client.HTTPConnection(*server.server_address,timeout=1)
+   client.request('GET','/health');response=client.getresponse();self.assertEqual(response.status,200);response.read();client.close()
+  finally:stalled.close();release.set();server.shutdown();server.server_close();thread.join()
