@@ -16,7 +16,7 @@ function fixture(){
   vm.runInNewContext(code,{module,exports:module.exports,Date,console,require(id){
    if(id==="next/server")return{NextResponse:{json:(body,init)=>Response.json(body,init)}};
    if(id==="@/lib/prisma")return{prisma};if(id==="@/lib/session")return{getCurrentUser:async()=>state.user};
-   if(id==="@/lib/permissions")return{hasPermission:()=>true};if(id==="@/lib/super-admin-scope")return{isPrimarySuperAdmin:()=>true};
+   if(id==="@/lib/permissions")return{hasPermission:(user,key)=>!user.permissionsCustomized || (user.permissions || []).includes(key)};if(id==="@/lib/super-admin-scope")return{isPrimarySuperAdmin:()=>true};
    if(id==="@/lib/building-parking")return{ParkingError,lockBuildingParking:async()=>{}};
    if(id==="@/lib/rfid-access")return{lockRfid:async()=>{},rfidApiError:e=>Response.json({ok:false,message:e.message},{status:e.status||500})};
    if(id==="@/lib/manual-exit")return load("src/lib/manual-exit.ts");
@@ -52,3 +52,6 @@ test("Approval of an old request cannot exit a vehicle that has exited and re-en
  f.state.target.lastAccessAt=new Date("2026-10-12T09:00:00Z");f.state.user.role="BUILDING_ADMIN";
  assert.equal((await f.approve()).status,200);assert.equal(f.state.notices[0].status,"CLOSED");assert.equal(f.state.target.isInside,true);assert.equal(f.state.events.length,0);
 });
+
+test("Supervisor without manual-exit permission cannot create a request", async()=>{ const f=fixture(); f.state.user.permissionsCustomized=true; f.state.user.permissions=["supervisor.liveDashboard"]; assert.equal((await f.request()).status,403); assert.equal(f.state.notices.length,0); assert.equal(f.state.target.isInside,true); });
+test("Admin without approval permission cannot perform a direct manual exit", async()=>{ const f=fixture(); f.state.user.role="BUILDING_ADMIN"; f.state.user.permissionsCustomized=true; f.state.user.permissions=["building.liveMonitor"]; assert.equal((await f.request()).status,403); assert.equal(f.state.events.length,0); assert.equal(f.state.target.isInside,true); });

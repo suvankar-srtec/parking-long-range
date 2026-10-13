@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { hasPermission } from "@/lib/permissions";
 import { getCurrentUser } from "@/lib/session";
 import { lockBuildingParking, ParkingError } from "@/lib/building-parking";
 
@@ -11,7 +12,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
   const { id } = await context.params;
   const user = await getCurrentUser();
 
-  if (!user || user.role !== "BUILDING_ADMIN" || !user.buildingId) {
+  if (!user || user.role !== "BUILDING_ADMIN" || !user.buildingId || !hasPermission(user, "building.manageCompanyAccounts")) {
     return NextResponse.json(
       { ok: false, message: "Only the Building Admin can change company status." },
       { status: 403 },

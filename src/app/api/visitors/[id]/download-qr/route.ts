@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { hasPermission } from "@/lib/permissions";
 import { getCurrentUser } from "@/lib/session";
 import { renderVisitorPassPng } from "@/lib/visitor-pass-image";
 
@@ -25,6 +26,8 @@ export async function GET(
     if (!user) {
       return NextResponse.json({ ok: false, message: "Sign in required." }, { status: 403 });
     }
+
+    if (!hasPermission(user, user.role === "BUILDING_ADMIN" ? "building.manageVisitors" : "company.manageVisitors")) return NextResponse.json({ ok: false, message: "Visitor management is not allowed for this account." }, { status: 403 });
 
     const isBuildingAdmin = user.role === "BUILDING_ADMIN";
     const isCompanyUser = user.role === "COMPANY_ADMIN" || user.role === "BUILDING_OWNER";

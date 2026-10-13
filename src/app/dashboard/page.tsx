@@ -111,11 +111,12 @@ export default async function DashboardPage() {
       </section> : null}
 
       <section className="portfolio-card building-management"><CompanyList
-        companies={building.companies}
+        companies={building.companies.map(company => ({ ...company, users: company.users.map(account => ({ ...account, password: hasPermission(user, "building.manageCompanyAccounts") ? account.password : undefined })) }))}
         companyParking={building.companyParking}
         showUserId
-        showPassword
-        canManageStatus
+        showPassword={hasPermission(user, "building.manageCompanyAccounts")}
+        canManageStatus={hasPermission(user, "building.manageCompanyAccounts")}
+        canEditParking={hasPermission(user, "building.allocateCompanyParking")}
         integratedHeader
         headerAction={canCreateCompanies ? <BuildingAdminPanel buildingId={building.id} /> : null}
       /></section>

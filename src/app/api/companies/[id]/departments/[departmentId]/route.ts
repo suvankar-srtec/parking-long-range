@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { hasPermission } from "@/lib/permissions";
 import { getCurrentUser } from "@/lib/session";
 
 async function canManageCompany(companyId: string) {
   const user = await getCurrentUser();
   if (!user) return null;
-  if (user.role === "COMPANY_ADMIN" || user.role === "BUILDING_OWNER") return user.companyId === companyId ? user : null;
+  if (user.role === "COMPANY_ADMIN" || user.role === "BUILDING_OWNER") return user.companyId === companyId && hasPermission(user, "company.managePeople") ? user : null;
   if (user.role === "BUILDING_ADMIN") {
     const company = await prisma.company.findUnique({ where: { id: companyId }, select: { buildingId: true } });
     return company && company.buildingId === user.buildingId ? user : null;

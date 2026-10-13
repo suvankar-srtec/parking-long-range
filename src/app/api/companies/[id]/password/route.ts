@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { hasPermission } from "@/lib/permissions";
 import { getCurrentUser } from "@/lib/session";
 
 export async function PATCH(
@@ -9,7 +10,7 @@ export async function PATCH(
 ) {
   try {
     const user = await getCurrentUser();
-    if (!user || user.role !== "BUILDING_ADMIN" || !user.buildingId) {
+    if (!user || user.role !== "BUILDING_ADMIN" || !user.buildingId || !hasPermission(user, "building.manageCompanyAccounts")) {
       return NextResponse.json(
         { ok: false, message: "Only the Admin assigned to this building can update company passwords." },
         { status: 403 },

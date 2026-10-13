@@ -9,7 +9,7 @@ import { getCurrentUser } from "@/lib/session";
 export default async function CardBlockPage() {
   const user = await getCurrentUser();
   if (!user || user.role !== "BUILDING_ADMIN" || !user.buildingId) redirect("/dashboard");
-  if (!hasPermission(user, "building.configureReaders")) redirect("/dashboard");
+  if (!hasPermission(user, "building.blockCards")) redirect("/dashboard");
 
   const permissions = effectivePermissions(user);
   const [building, vehicles, ownerVehicles] = await Promise.all([

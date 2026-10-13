@@ -13,7 +13,7 @@ import styles from "./page.module.css";
 export default async function CompanyCardsPage({ params }: { params: Promise<{ companyId: string }> }) {
   const user = await getCurrentUser();
   if (!user || !["SUPER_ADMIN", "BUILDING_ADMIN"].includes(user.role)) redirect("/dashboard");
-  if (user.role === "BUILDING_ADMIN" && !hasPermission(user, "building.configureReaders")) redirect("/dashboard");
+  if (user.role === "BUILDING_ADMIN" && !hasPermission(user, "building.registerCompanyCards")) redirect("/dashboard");
   const { companyId } = await params;
   const company = await prisma.company.findFirst({
     where: { AND: [{ id: companyId }, companyCardScope(user)] },

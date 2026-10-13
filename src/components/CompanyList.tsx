@@ -25,6 +25,7 @@ export default function CompanyList({
   showUserId = false,
   showPassword = false,
   canManageStatus = false,
+  canEditParking = showPassword,
   integratedHeader = false,
   headerAction,
 }: {
@@ -33,6 +34,7 @@ export default function CompanyList({
   showUserId?: boolean;
   showPassword?: boolean;
   canManageStatus?: boolean;
+  canEditParking?: boolean;
   integratedHeader?: boolean;
   headerAction?: ReactNode;
 }) {
@@ -120,7 +122,7 @@ export default function CompanyList({
                 : <span className={`${styles.statusBadge} ${company.enabled === false ? styles.statusDisabled : styles.statusEnabled}`}>
                     {company.enabled === false ? "Disabled" : "Enabled"}
                   </span>}
-              {showPassword ? <CompanyAdminSettingsModal companyId={company.id} companyName={company.name} parkingAllocation={company.parkingAllocation} /> : null}
+              {canEditParking ? <CompanyAdminSettingsModal companyId={company.id} companyName={company.name} parkingAllocation={company.parkingAllocation} /> : null}
               <button
                 type="button"
                 className={`${styles.expandButton} ${expanded ? styles.expandButtonOpen : ""}`}

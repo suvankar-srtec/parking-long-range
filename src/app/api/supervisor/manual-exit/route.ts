@@ -9,7 +9,7 @@ import { manualExitTarget, completeManualExit } from "@/lib/manual-exit";
 export async function POST(request: Request) {
   try {
     const user = await getCurrentUser();
-    if (!user || !(user.role === "SUPER_ADMIN" || user.role === "BUILDING_ADMIN" || user.role === "EMPLOYEE" && hasPermission(user, "supervisor.liveDashboard"))) throw new ParkingError("Manual exit is not available for this account.", 403);
+    if (!user || !(user.role === "SUPER_ADMIN" || user.role === "BUILDING_ADMIN" && hasPermission(user, "building.approveManualExit") || user.role === "EMPLOYEE" && hasPermission(user, "supervisor.liveDashboard") && hasPermission(user, "supervisor.requestManualExit"))) throw new ParkingError("Manual exit is not available for this account.", 403);
     const body = await request.json(); const [kind, id] = String(body.id || "").split(":");
     if (!id) throw new ParkingError("Invalid active-card selection.");
     const result = await prisma.$transaction(async tx => {

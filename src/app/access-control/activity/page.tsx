@@ -10,7 +10,7 @@ import { isPrimarySuperAdmin } from "@/lib/super-admin-scope";
 export default async function RealtimeMonitorPage() {
   const user = await getCurrentUser();
   if (!user || !["SUPER_ADMIN", "BUILDING_ADMIN"].includes(user.role)) redirect("/dashboard");
-  if (user.role === "BUILDING_ADMIN" && !hasPermission(user, "building.configureReaders")) redirect("/dashboard");
+  if (user.role === "BUILDING_ADMIN" && !hasPermission(user, "building.liveMonitor")) redirect("/dashboard");
 
   const permissions = effectivePermissions(user);
   const primarySuperAdmin = user.role === "SUPER_ADMIN" && isPrimarySuperAdmin(user);

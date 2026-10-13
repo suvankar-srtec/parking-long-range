@@ -45,7 +45,8 @@ async function assertSuperAdminBuilding(user: Awaited<ReturnType<typeof rfidUser
 export async function GET() {
   try {
     const user = await rfidUser();
-    assertReaderPageAccess(user);
+    if (user.role === "COMPANY_ADMIN") throw new ParkingError("Reader management is not available to Company/User accounts.", 403);
+    if (user.role === "BUILDING_ADMIN" && !["building.configureReaders", "building.configureGates", "building.registerCompanyCards", "building.registerOwnerParking", "building.liveMonitor"].some(key => hasPermission(user, key as import("@/lib/permissions").PermissionKey))) throw new ParkingError("Reader access is not assigned to this account.", 403);
 
     const primarySuperAdmin = user.role === "SUPER_ADMIN" && isPrimarySuperAdmin(user);
     const canAssignReaders = user.role === "SUPER_ADMIN";

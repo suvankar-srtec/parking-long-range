@@ -11,7 +11,7 @@ import { parseGateConfig } from "@/lib/gate-config";
 export default async function GateDetailsPage() {
   const user = await getCurrentUser();
   if (!user || !["SUPER_ADMIN", "BUILDING_ADMIN"].includes(user.role)) redirect("/dashboard");
-  if (user.role === "BUILDING_ADMIN" && !hasPermission(user, "building.configureReaders")) redirect("/dashboard");
+  if (user.role === "BUILDING_ADMIN" && !hasPermission(user, "building.configureGates")) redirect("/dashboard");
 
   const permissions = effectivePermissions(user);
   const primary = user.role === "SUPER_ADMIN" && isPrimarySuperAdmin(user);

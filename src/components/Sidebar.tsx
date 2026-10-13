@@ -125,7 +125,8 @@ export default function Sidebar({
     setExpanded((current) => ({ ...current, [section]: !current[section] }));
   }
 
-  const showAccess = isSuperAdmin || (role === "BUILDING_ADMIN" && assigned.has("building.configureReaders"));
+  const accessAllowed = (key: string) => isSuperAdmin || role === "BUILDING_ADMIN" && assigned.has(key);
+  const showAccess = ["configureReaders", "configureGates", "registerCompanyCards", "liveMonitor", "blockCards"].some(key => accessAllowed("building." + key));
   const showSupervisorParking = role === "EMPLOYEE" && assigned.has("supervisor.employeeParking");
   const showAdminParking = role === "BUILDING_ADMIN"
     && assigned.has("building.allocateCompanyParking")
@@ -133,7 +134,7 @@ export default function Sidebar({
   const showCompanyParking = (role === "COMPANY_ADMIN" || role === "BUILDING_OWNER")
     && assigned.has("company.allocateEmployeeParking");
   const showSupervisorManagement = role === "BUILDING_ADMIN" && assigned.has("building.manageSupervisor");
-  const showVisitorForm = role === "BUILDING_ADMIN" || role === "COMPANY_ADMIN" || role === "BUILDING_OWNER";
+  const showVisitorForm = role === "BUILDING_ADMIN" && assigned.has("building.manageVisitors") || (role === "COMPANY_ADMIN" || role === "BUILDING_OWNER") && assigned.has("company.manageVisitors");
   const showReports = isSuperAdmin
     || (role === "BUILDING_ADMIN" && assigned.has("building.viewReports"))
     || ((role === "COMPANY_ADMIN" || role === "BUILDING_OWNER") && assigned.has("company.viewReports"))
@@ -271,7 +272,7 @@ export default function Sidebar({
         </div>
       </div>
 
-      {(isSuperAdmin || role === "BUILDING_ADMIN") && <Link href="/notifications" className={`sidebar-nav-parent${pathname === "/notifications" ? " is-active" : ""}`}>
+      {(isSuperAdmin || role === "BUILDING_ADMIN" && assigned.has("building.approveManualExit")) && <Link href="/notifications" className={`sidebar-nav-parent${pathname === "/notifications" ? " is-active" : ""}`}>
         <NavRow icon="bell" label="Notifications" end={<NotificationBadge />} />
       </Link>}
 
@@ -295,31 +296,31 @@ export default function Sidebar({
           className={`sidebar-submenu${expanded.access ? " is-open" : ""}`}
           hidden={!expanded.access}
         >
-          <Link
+          {accessAllowed("building.configureReaders") ? <Link
             className={`sidebar-submenu-link${isAccessPage("/access-control") ? " is-active" : ""}`}
             href="/access-control"
           >
             <NavRow icon="reader" label="Device / Reader" />
-          </Link>
-          <Link
+          </Link> : null}
+          {accessAllowed("building.configureGates") ? <Link
             className={`sidebar-submenu-link${isAccessPage("/access-control/gate-details") ? " is-active" : ""}`}
             href="/access-control/gate-details"
           >
             <NavRow icon="gate" label="Gate Details" />
-          </Link>
-          <Link
+          </Link> : null}
+          {accessAllowed("building.registerCompanyCards") ? <Link
             className={`sidebar-submenu-link${isAccessPage("/access-control/register-cards") ? " is-active" : ""}`}
             href="/access-control/register-cards"
           >
             <NavRow icon="card" label="Register cards" />
-          </Link>
-          <Link
+          </Link> : null}
+          {accessAllowed("building.liveMonitor") ? <Link
             className={`sidebar-submenu-link${isAccessPage("/access-control/activity") ? " is-active" : ""}`}
             href="/access-control/activity"
           >
             <NavRow icon="activity" label="Real Time Monitor" />
-          </Link>
-          {role === "BUILDING_ADMIN" ? <Link
+          </Link> : null}
+          {role === "BUILDING_ADMIN" && assigned.has("building.blockCards") ? <Link
             className={`sidebar-submenu-link${isAccessPage("/access-control/card-block") ? " is-active" : ""}`}
             href="/access-control/card-block"
           >

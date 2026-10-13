@@ -12,7 +12,7 @@ export async function PATCH(
 ) {
   try {
     const user = await getCurrentUser();
-    if (!user || user.role !== "BUILDING_ADMIN" || !user.buildingId || !hasPermission(user, "building.configureReaders")) {
+    if (!user || user.role !== "BUILDING_ADMIN" || !user.buildingId || !hasPermission(user, "building.blockCards")) {
       return NextResponse.json({ ok: false, message: "Card Block is available only to the assigned Building Admin." }, { status: 403 });
     }
 

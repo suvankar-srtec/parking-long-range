@@ -14,7 +14,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   try {
     const { id: companyId, employeeId } = await context.params;
     const user = await getCurrentUser();
-    const adminRegistration = user?.role === "SUPER_ADMIN" || (user?.role === "BUILDING_ADMIN" && hasPermission(user, "building.configureReaders"));
+    const adminRegistration = user?.role === "SUPER_ADMIN" || (user?.role === "BUILDING_ADMIN" && hasPermission(user, "building.registerCompanyCards"));
     if (!user || (!adminRegistration && (user.role !== "COMPANY_ADMIN" || user.companyId !== companyId || !hasPermission(user, "company.manageVehicles")))) {
       return NextResponse.json({ ok: false, message: "Vehicle management is not assigned to this Company/User account." }, { status: 403 });
     }

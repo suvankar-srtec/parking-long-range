@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { hasPermission } from "@/lib/permissions";
 import { getCurrentUser } from "@/lib/session";
 
 function cleanText(value: unknown, maxLength: number) {
@@ -20,6 +21,8 @@ export async function PATCH(
     if (!user) {
       return NextResponse.json({ ok: false, message: "Sign in required." }, { status: 403 });
     }
+
+    if (!hasPermission(user, user.role === "BUILDING_ADMIN" ? "building.manageVisitors" : "company.manageVisitors")) return NextResponse.json({ ok: false, message: "Visitor management is not allowed for this account." }, { status: 403 });
 
     const isBuildingAdmin = user.role === "BUILDING_ADMIN";
     const isCompanyUser = user.role === "COMPANY_ADMIN" || user.role === "BUILDING_OWNER";

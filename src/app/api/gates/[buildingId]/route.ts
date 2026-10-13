@@ -13,7 +13,7 @@ export async function POST(
   if (!user || !["SUPER_ADMIN", "BUILDING_ADMIN"].includes(user.role)) {
     return NextResponse.json({ ok: false, message: "Super Admin or Building Admin access required." }, { status: 403 });
   }
-  if (user.role === "BUILDING_ADMIN" && !hasPermission(user, "building.configureReaders")) {
+  if (user.role === "BUILDING_ADMIN" && !hasPermission(user, "building.configureGates")) {
     return NextResponse.json({ ok: false, message: "Gate and reader configuration is not assigned to this Admin account." }, { status: 403 });
   }
 

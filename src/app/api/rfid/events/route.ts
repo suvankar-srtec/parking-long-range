@@ -1,3 +1,4 @@
+import { hasPermission as canUsePermission } from "@/lib/permissions";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { rfidUser, rfidApiError } from "@/lib/rfid-access";
@@ -5,6 +6,7 @@ import { rfidUser, rfidApiError } from "@/lib/rfid-access";
 export async function GET(request: Request) {
   try {
     const user = await rfidUser();
+  if (user.role === "BUILDING_ADMIN" && !canUsePermission(user, "building.liveMonitor")) return NextResponse.json({ ok: false, message: "Live monitoring is not allowed for this account." }, { status: 403 });
     const scope = user.role === "SUPER_ADMIN"
       ? {}
       : user.role === "COMPANY_ADMIN"

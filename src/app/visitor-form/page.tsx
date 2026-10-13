@@ -4,7 +4,7 @@ import SignOutButton from "@/components/SignOutButton";
 import VisitorForm from "@/components/VisitorForm";
 import VisitorTable from "@/components/VisitorTable";
 import { prisma } from "@/lib/prisma";
-import { effectivePermissions } from "@/lib/permissions";
+import { effectivePermissions, hasPermission } from "@/lib/permissions";
 import { roleLabel } from "@/lib/roles";
 import { getCurrentUser } from "@/lib/session";
 
@@ -28,6 +28,7 @@ export default async function VisitorFormPage() {
   const isCompanyUser = user.role === "COMPANY_ADMIN" || user.role === "BUILDING_OWNER";
   if (!isBuildingAdmin && !isCompanyUser) redirect("/dashboard");
 
+  if (!hasPermission(user, isBuildingAdmin ? "building.manageVisitors" : "company.manageVisitors")) redirect("/dashboard");
   const permissions = effectivePermissions(user);
   let scopeLabel = "Building";
   let scopeName = "";

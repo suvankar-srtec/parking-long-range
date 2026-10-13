@@ -1,3 +1,4 @@
+import { hasPermission as canUsePermission } from "@/lib/permissions";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/session";
@@ -15,6 +16,7 @@ export async function GET(request: Request) {
   if (!user) return NextResponse.json({ ok: false, message: "Sign in required." }, { status: 401 });
 
   const url = new URL(request.url);
+  if (user.role === "BUILDING_ADMIN" && !canUsePermission(user, "building.liveMonitor")) return NextResponse.json({ ok: false, message: "Live monitoring is not allowed for this account." }, { status: 403 });
   const start = parseDate(url.searchParams.get("start"));
   const end = parseDate(url.searchParams.get("end"));
   const requestedBuildingId = String(url.searchParams.get("buildingId") || "").trim();
@@ -214,6 +216,7 @@ export async function GET(request: Request) {
     totalIn: allowTotalIn ? totalIn : null,
     totalOut: allowTotalOut ? totalOut : null,
     totalOnSite: allowTotalOnSite ? insideVehicles.length + ownerVehiclesInside.length + insideVisitors.length : null,
+    canManualExit: user.role === "SUPER_ADMIN" || user.role === "BUILDING_ADMIN" && hasPermission(user, "building.approveManualExit") || user.role === "EMPLOYEE" && hasPermission(user, "supervisor.liveDashboard") && hasPermission(user, "supervisor.requestManualExit"),
     activeCards: allowTotalOnSite ? activeCards : [],
     employeeSpacesAllotted: allowEmployeeParking ? employeeSpacesAllotted : null,
     employeeVehiclesInside: allowEmployeeParking ? employeeVehiclesInside : null,

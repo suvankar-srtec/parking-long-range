@@ -10,7 +10,7 @@ import { prisma } from "@/lib/prisma";
 export default async function RegisterCardsPage() {
   const user = await getCurrentUser();
   if (!user || !["SUPER_ADMIN", "BUILDING_ADMIN"].includes(user.role)) redirect("/dashboard");
-  if (user.role === "BUILDING_ADMIN" && !hasPermission(user, "building.configureReaders")) redirect("/dashboard");
+  if (user.role === "BUILDING_ADMIN" && !hasPermission(user, "building.registerCompanyCards")) redirect("/dashboard");
   const permissions = effectivePermissions(user);
 
   const companyWhere = companyCardScope(user);

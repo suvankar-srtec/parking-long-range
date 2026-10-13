@@ -1,6 +1,15 @@
 import type { UserRole } from "@prisma/client";
 
 export const PERMISSION_KEYS = [
+  "building.manageCompanyAccounts",
+  "supervisor.requestManualExit",
+  "company.manageVisitors",
+  "building.configureGates",
+  "building.registerCompanyCards",
+  "building.liveMonitor",
+  "building.blockCards",
+  "building.manageVisitors",
+  "building.approveManualExit",
   "building.createCompanies",
   "building.allocateCompanyParking",
   "building.manageOwnerParking",
@@ -33,6 +42,13 @@ export type PermissionOption = {
 };
 
 const BUILDING_ADMIN_PERMISSIONS: PermissionOption[] = [
+  { key: "building.manageCompanyAccounts", label: "Manage company accounts", description: "Enable or disable companies and update their account passwords." },
+  { key: "building.configureGates", label: "Configure gates", description: "Assign entry and exit readers to building gates." },
+  { key: "building.registerCompanyCards", label: "Register company cards", description: "Register RFID cards for company vehicles in this building." },
+  { key: "building.liveMonitor", label: "Live entry / exit monitoring", description: "View building activity and vehicles currently on site." },
+  { key: "building.blockCards", label: "Block / unblock RFID cards", description: "Control card access within this building." },
+  { key: "building.manageVisitors", label: "Manage visitors and QR passes", description: "Create and edit building visitors, download and send QR passes." },
+  { key: "building.approveManualExit", label: "Approve manual exit requests", description: "Review notifications and approve Supervisor requests; perform manual exits." },
   { key: "building.createCompanies", label: "Create companies", description: "Create companies inside this building only." },
   { key: "building.allocateCompanyParking", label: "Allocate company parking", description: "Set parking allocation while creating companies." },
   { key: "building.manageOwnerParking", label: "Manage Owner Parking", description: "View and remove Owner Parking allocations." },
@@ -43,7 +59,8 @@ const BUILDING_ADMIN_PERMISSIONS: PermissionOption[] = [
 ];
 
 const COMPANY_PERMISSIONS: PermissionOption[] = [
-  { key: "company.managePeople", label: "Manage people", description: "Add and edit Employees and Company Owners." },
+  { key: "company.manageVisitors", label: "Manage visitors and QR passes", description: "Create and edit company visitors, download and send QR passes." },
+  { key: "company.managePeople", label: "Manage people and departments", description: "Add and edit Employees, Company Owners and company departments." },
   { key: "company.allocateEmployeeParking", label: "Allocate employee parking", description: "Assign parking limits within the company allocation." },
   { key: "company.manageVehicles", label: "Add / remove vehicles", description: "Register and remove vehicles for company people." },
   { key: "company.registerRfid", label: "Register RFID cards", description: "Use a registration reader to assign RFID cards to vehicles." },
@@ -52,6 +69,7 @@ const COMPANY_PERMISSIONS: PermissionOption[] = [
 ];
 
 const SUPERVISOR_PERMISSIONS: PermissionOption[] = [
+  { key: "supervisor.requestManualExit", label: "Request manual exit", description: "Request an exit for an on-site vehicle; Admin or Super Admin approval is required." },
   { key: "supervisor.totalOnSite", label: "Total On Site", description: "See the current number of vehicles inside." },
   { key: "supervisor.totalIn", label: "Total IN", description: "See today's successful entry count." },
   { key: "supervisor.totalOut", label: "Total OUT", description: "See today's successful exit count." },

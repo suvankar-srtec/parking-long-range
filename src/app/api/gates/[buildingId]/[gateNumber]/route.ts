@@ -7,7 +7,7 @@ import { isPrimarySuperAdmin } from "@/lib/super-admin-scope";
 import { isGateDirection, parseGateConfig, serializeGateConfig } from "@/lib/gate-config";
 
 async function getAuthorizedBuilding(user: NonNullable<Awaited<ReturnType<typeof getCurrentUser>>>, buildingId: string) {
-  if (user.role === "BUILDING_ADMIN" && !hasPermission(user, "building.configureReaders")) {
+  if (user.role === "BUILDING_ADMIN" && !hasPermission(user, "building.configureGates")) {
     return { error: NextResponse.json({ ok: false, message: "Gate and reader configuration is not assigned to this Admin account." }, { status: 403 }) };
   }
   const building = await prisma.building.findUnique({
