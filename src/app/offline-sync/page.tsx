@@ -4,16 +4,15 @@ import SignOutButton from "@/components/SignOutButton";
 import CloudCOfflineHistory from "@/components/CloudCOfflineHistory";
 import { getCurrentUser } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
-import { effectivePermissions, hasPermission } from "@/lib/permissions";
+import { effectivePermissions } from "@/lib/permissions";
 import { isPrimarySuperAdmin } from "@/lib/super-admin-scope";
 
 export default async function OfflineSyncPage() {
   const user = await getCurrentUser();
-  if (!user || !["SUPER_ADMIN", "BUILDING_ADMIN"].includes(user.role)) redirect("/dashboard");
-  if (user.role === "BUILDING_ADMIN" && (!user.buildingId || !hasPermission(user, "building.offlineSync"))) redirect("/dashboard");
+  if (!user || user.role !== "SUPER_ADMIN") redirect("/dashboard");
   const primary = isPrimarySuperAdmin(user);
   const readers = await prisma.rfidReader.findMany({
-    where: { readerProtocol: "CLOUD_C", ...(user.role === "BUILDING_ADMIN" ? { buildingId: user.buildingId! } : primary ? {} : { building: { superAdminId: user.id } }) },
+    where: { readerProtocol: "CLOUD_C", ...(primary ? {} : { building: { superAdminId: user.id } }) },
     select: { deviceNumber: true },
     orderBy: { deviceNumber: "asc" },
   });
