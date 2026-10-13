@@ -4,9 +4,12 @@ import { manualExitResult } from "@/lib/rfid-display";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Spinner } from "./LoadingIndicator";
 import OverstayAlert, { type OverstayCard } from "./OverstayAlert";
+import TableColumnFilter from "./TableColumnFilter";
 import styles from "./SupervisorHeadcount.module.css";
 
 type Option = { id: string; name: string; buildingId?: string };
+const LIVE_COLUMNS = ["Time", "Device", "RFID / QR", "Vehicle", "Owner", "Employee", "Visitor", "Company", "Action", "Result"] as const;
+
 type ScanEvent = {
   id: string;
   action: string;
@@ -53,6 +56,7 @@ export default function RealtimeMonitor({
 }) {
   const [buildingId, setBuildingId] = useState(fixedBuildingId || buildings[0]?.id || "");
   const [companyId, setCompanyId] = useState(fixedCompanyId || "");
+  const [visibleColumns, setVisibleColumns] = useState<Set<number>>(() => new Set(LIVE_COLUMNS.map((_, index) => index)));
   const [data, setData] = useState<Headcount | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -180,22 +184,22 @@ export default function RealtimeMonitor({
     </section>
 
     <section className={`portfolio-card ${styles.scanTableCard}`}>
-      <div className={styles.scanTableHeader}><div><div className="section-kicker">RFID ACTIVITY</div><h2>Live Dashboard</h2></div></div>
+      <div className={styles.scanTableHeader}><div><div className="section-kicker">RFID ACTIVITY</div><h2>Live Dashboard</h2></div><TableColumnFilter columns={LIVE_COLUMNS} selected={visibleColumns} onChange={setVisibleColumns} /></div>
       <div className={styles.tableWrap}>
         <table className={styles.scanTable}>
-          <thead><tr><th>Time</th><th>Device</th><th>RFID / QR</th><th>Vehicle</th><th>Owner</th><th>Employee</th><th>Visitor</th><th>Company</th><th>Action</th><th>Result</th></tr></thead>
-          <tbody>{data?.recentEvents?.length ? data.recentEvents.map((event) => <tr key={event.id}>
-            <td>{new Date(event.createdAt).toLocaleString([], { hour: "2-digit", minute: "2-digit", second: "2-digit", month: "short", day: "2-digit" })}</td>
-            <td>{event.deviceNumber || "-"}</td>
-            <td>{event.cardNo || "-"}</td>
-            <td>{event.vehicle?.plateNumber || "-"}</td>
-            <td className={event.personType === "OWNER" ? styles.ownerPerson : undefined}>{event.personType === "OWNER" ? event.vehicle?.ownerName || "-" : "-"}</td>
-            <td className={event.personType === "EMPLOYEE" ? styles.employeePerson : undefined}>{event.personType === "EMPLOYEE" ? event.vehicle?.ownerName || "-" : "-"}</td>
-            <td className={event.personType === "VISITOR" ? styles.visitorPerson : undefined}>{event.personType === "VISITOR" ? event.vehicle?.ownerName || "-" : "-"}</td>
-            <td>{event.company?.name || "-"}</td>
-            <td><span className={`${styles.actionBadge} ${event.action === "ENTRY" ? styles.entryBadge : event.action === "EXIT" ? styles.exitBadge : styles.deniedBadge}`}>{event.action}</span></td>
-            <td className={event.code === "0000" ? styles.successResult : styles.deniedResult}>{event.deviceNumber === "MANUAL" && event.action === "EXIT" ? manualExitResult(event.message) : event.code === "0000" ? event.action === "ENTRY" ? "Entry allowed" : event.action === "EXIT" ? "Exit allowed" : event.message : event.message || "Denied"}</td>
-          </tr>) : <tr><td colSpan={10} className={styles.emptyTable}>No RFID / QR activity has been recorded yet.</td></tr>}</tbody>
+          <thead><tr><th hidden={!visibleColumns.has(0)}>Time</th><th hidden={!visibleColumns.has(1)}>Device</th><th hidden={!visibleColumns.has(2)}>RFID / QR</th><th hidden={!visibleColumns.has(3)}>Vehicle</th><th hidden={!visibleColumns.has(4)}>Owner</th><th hidden={!visibleColumns.has(5)}>Employee</th><th hidden={!visibleColumns.has(6)}>Visitor</th><th hidden={!visibleColumns.has(7)}>Company</th><th hidden={!visibleColumns.has(8)}>Action</th><th hidden={!visibleColumns.has(9)}>Result</th></tr></thead>
+          <tbody>{visibleColumns.size === 0 ? <tr><td className={styles.emptyTable}>Select a column to display the activity table.</td></tr> : data?.recentEvents?.length ? data.recentEvents.map((event) => <tr key={event.id}>
+            <td hidden={!visibleColumns.has(0)}>{new Date(event.createdAt).toLocaleString([], { hour: "2-digit", minute: "2-digit", second: "2-digit", month: "short", day: "2-digit" })}</td>
+            <td hidden={!visibleColumns.has(1)}>{event.deviceNumber || "-"}</td>
+            <td hidden={!visibleColumns.has(2)}>{event.cardNo || "-"}</td>
+            <td hidden={!visibleColumns.has(3)}>{event.vehicle?.plateNumber || "-"}</td>
+            <td hidden={!visibleColumns.has(4)} className={event.personType === "OWNER" ? styles.ownerPerson : undefined}>{event.personType === "OWNER" ? event.vehicle?.ownerName || "-" : "-"}</td>
+            <td hidden={!visibleColumns.has(5)} className={event.personType === "EMPLOYEE" ? styles.employeePerson : undefined}>{event.personType === "EMPLOYEE" ? event.vehicle?.ownerName || "-" : "-"}</td>
+            <td hidden={!visibleColumns.has(6)} className={event.personType === "VISITOR" ? styles.visitorPerson : undefined}>{event.personType === "VISITOR" ? event.vehicle?.ownerName || "-" : "-"}</td>
+            <td hidden={!visibleColumns.has(7)}>{event.company?.name || "-"}</td>
+            <td hidden={!visibleColumns.has(8)}><span className={`${styles.actionBadge} ${event.action === "ENTRY" ? styles.entryBadge : event.action === "EXIT" ? styles.exitBadge : styles.deniedBadge}`}>{event.action}</span></td>
+            <td hidden={!visibleColumns.has(9)} className={event.code === "0000" ? styles.successResult : styles.deniedResult}>{event.deviceNumber === "MANUAL" && event.action === "EXIT" ? manualExitResult(event.message) : event.code === "0000" ? event.action === "ENTRY" ? "Entry allowed" : event.action === "EXIT" ? "Exit allowed" : event.message : event.message || "Denied"}</td>
+          </tr>) : <tr><td colSpan={Math.max(visibleColumns.size, 1)} className={styles.emptyTable}>No RFID / QR activity has been recorded yet.</td></tr>}</tbody>
         </table>
       </div>
     </section>

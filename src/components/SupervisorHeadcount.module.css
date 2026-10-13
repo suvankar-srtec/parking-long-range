@@ -145,3 +145,7 @@
     grid-template-columns:88px minmax(0,1fr)!important;
   }
 }
+
+.scanTable [hidden]{display:none!important}
+.scanTableCard{overflow:visible}
+@media(max-width:800px){.scanTableHeader{flex-direction:row;align-items:center}}
