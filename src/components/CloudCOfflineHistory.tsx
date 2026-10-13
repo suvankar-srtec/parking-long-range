@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { requestJson } from "@/lib/client-request";
 
 type RecordRow = { id: string; serial: string; kind: string; index: string; scanTime: string; scanTimeIso: string | null;
-  card: string; reader: string; eventType: string; receivedAt: string };
+  card: string; reader: string; eventType: string; action?: string; source?: string; receivedAt: string };
 type History = { ok: boolean; records: RecordRow[] };
 const scanTimeFormatter = new Intl.DateTimeFormat("en-IN", {
   timeZone: "Asia/Kolkata", day: "2-digit", month: "short", year: "numeric",
@@ -29,7 +29,15 @@ export default function CloudCOfflineHistory({ controllers }: { controllers: str
       const params = new URLSearchParams();
       if (serial) params.set("serial", serial);
       try {
-        const result = await requestJson<History>("/api/rfid/cloudc-history?" + params, "GET", undefined, controller.signal);
+        const gatewayParams = new URLSearchParams(params); gatewayParams.set("source", "gateway");
+        const [native, gateway] = await Promise.all([
+          requestJson<History>("/api/rfid/cloudc-history?" + params, "GET", undefined, controller.signal),
+          requestJson<History>("/api/rfid/cloudc-history?" + gatewayParams, "GET", undefined, controller.signal),
+        ]);
+        const records = [...native.records.map(row => ({ ...row, source: "Controller" })), ...gateway.records]
+          .sort((a, b) => Date.parse(b.scanTimeIso || b.receivedAt) - Date.parse(a.scanTimeIso || a.receivedAt))
+          .slice(0, 100);
+        const result: History = { ok: true, records };
         if (!controller.signal.aborted) { setData(result); setError(""); }
       } catch (e) {
         if (!controller.signal.aborted) setError(e instanceof Error ? e.message : "Unable to load controller history.");
@@ -53,15 +61,15 @@ export default function CloudCOfflineHistory({ controllers }: { controllers: str
     {error && <p role="alert">{error}</p>}
     <div style={{ overflowX: "auto" }}>
       <table style={{ width: "100%", minWidth: 650, borderCollapse: "collapse", textAlign: "left" }}>
-        <thead><tr>{["Scan time (IST)", "Controller", "Reader", "Card", "Type", "Event code"].map(title =>
+        <thead><tr>{["Scan time (IST)", "Controller", "Reader", "Card", "Type", "Source", "Action", "Event code"].map(title =>
           <th key={title} scope="col" style={{ padding: "12px 10px", background: "#eef5fa", borderBottom: "1px solid #dbe5ed" }}>{title}</th>
         )}</tr></thead>
         <tbody>{records.map(row => <tr key={row.id}>
           <td style={{ whiteSpace: "nowrap", padding: "8px 10px" }}>{displayScanTime(row)}</td><td>{row.serial}</td>
           <td>{row.reader === "0" ? "A / IN" : row.reader === "1" ? "B / OUT" : row.reader || "-"}</td>
-          <td>{row.card || "-"}</td><td>{row.kind}</td><td>{row.eventType || "-"}</td>
+          <td>{row.card || "-"}</td><td>{row.kind}</td><td>{row.source || "Controller"}</td><td>{row.action || "-"}</td><td>{row.eventType || "-"}</td>
         </tr>)}
-        {!records.length && <tr><td colSpan={6} style={{ padding: "20px 10px", color: "#64748b" }} role="status">
+        {!records.length && <tr><td colSpan={8} style={{ padding: "20px 10px", color: "#64748b" }} role="status">
           {loading ? "Loading..." : error ? "Records unavailable." : "No records uploaded yet."}
         </td></tr>}
         </tbody>

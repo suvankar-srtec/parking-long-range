@@ -20,6 +20,24 @@ export async function GET(request: Request) {
     const serials = [...new Set(readers.filter(r => /-[AB]$/.test(r.deviceNumber)).map(r => r.deviceNumber.slice(0, -2)))];
     if (serial && !serials.includes(serial)) throw new ParkingError("This controller is not available to your account.", 403);
     const where = { serial: { in: serial ? [serial] : serials } };
+    // Gateway uploads are already reconciled movement records, separate from native history.
+    if (params.get("source") === "gateway") {
+      const selectedSerials = serial ? [serial] : serials;
+      const events = await prisma.rfidEvent.findMany({
+        where: { id: { startsWith: "local-gateway-" },
+          deviceNumber: { in: selectedSerials.flatMap(value => [value + "-A", value + "-B"]) },
+          ...(isPrimarySuperAdmin(user) ? {} : { building: { superAdminId: user.id } }) },
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: 100,
+        select: { id: true, deviceNumber: true, cardNo: true, createdAt: true, action: true, code: true },
+      });
+      return NextResponse.json({ ok: true, records: events.map(event => ({
+        id: event.id, serial: event.deviceNumber.slice(0, -2), kind: "CARD", index: "",
+        scanTime: event.createdAt.toISOString(), scanTimeIso: event.createdAt.toISOString(),
+        card: event.cardNo, reader: event.deviceNumber.endsWith("-A") ? "0" : "1",
+        eventType: event.code, action: event.action, source: "Gateway", receivedAt: event.createdAt,
+      })) }, { headers: { "Cache-Control": "no-store" } });
+    }
+
     if (cursor && !await prisma.cloudCHistory.findFirst({ where: { ...where, id: cursor }, select: { id: true } })) {
       throw new ParkingError("History page is no longer available.", 404);
     }
