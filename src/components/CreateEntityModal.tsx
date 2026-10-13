@@ -252,9 +252,9 @@ export default function CreateEntityModal({
       <section className={creationRole ? `modal-card permission-modal${isBuilding ? " building-permission-modal" : ""}` : "modal-card small-modal"} role="dialog" aria-modal="true" aria-labelledby="entity-modal-title">
         <div className="modal-head permission-modal-head">
           <div>
-            <div className="section-kicker">{createdEmployee ? "VEHICLE REGISTRATION" : "ACCOUNT SETUP"}</div>
-            <h2 id="entity-modal-title">{createdEmployee ? `Add vehicle for ${createdEmployee.name}` : title}</h2>
-            <p>{createdEmployee ? "The employee is saved. Register a vehicle and RFID card now, or finish without a vehicle." : isBuilding ? "Create the building account, define parking capacity, and control exactly which features the Building Admin can use." : kind === "company" ? "Add a company and choose the Company/User features this account can access." : "Create the employee or company owner first, then register their vehicle in the same window."}</p>
+            <div className="section-kicker" id={isBuilding ? "entity-modal-title" : undefined}>{createdEmployee ? "VEHICLE REGISTRATION" : "ACCOUNT SETUP"}</div>
+            {!isBuilding && <><h2 id="entity-modal-title">{createdEmployee ? `Add vehicle for ${createdEmployee.name}` : title}</h2>
+            <p>{createdEmployee ? "The employee is saved. Register a vehicle and RFID card now, or finish without a vehicle." : isBuilding ? "Create the building account, define parking capacity, and control exactly which features the Building Admin can use." : kind === "company" ? "Add a company and choose the Company/User features this account can access." : "Create the employee or company owner first, then register their vehicle in the same window."}</p></>}
           </div>
           <button type="button" className="modal-close" aria-label="Close form" disabled={pending} onClick={closeModal}>×</button>
         </div>
@@ -297,6 +297,18 @@ export default function CreateEntityModal({
     <style>{`
       .permission-modal{width:min(1040px,calc(100vw - 34px));max-height:calc(100vh - 34px);padding:0;overflow:hidden;display:flex;flex-direction:column;border-radius:13px}
       .permission-modal-head{padding:16px 20px 13px;margin:0;flex:0 0 auto;border-bottom:1px solid #e1e8e4;background:#fff}
+      .building-permission-modal,.building-permission-modal input,.building-permission-modal button,.building-permission-modal select,.building-permission-modal textarea{font-family:"Segoe UI",Arial,sans-serif!important;font-size:13px;font-weight:400;-webkit-font-smoothing:antialiased}
+      .building-permission-modal .section-kicker{font-size:13px;font-weight:700;letter-spacing:.06em}
+      .building-permission-modal .setup-card-head strong,.building-permission-modal .permission-side-head strong,.building-permission-modal .subsection-title strong{font-size:14px;font-weight:600}
+      .building-permission-modal .compact-entity-fields label{font-size:12px;font-weight:600}
+      .building-permission-modal .compact-entity-fields input{font-size:14px!important;font-weight:400!important}
+      .building-permission-modal .setup-card-head small,.building-permission-modal .subsection-title small,.building-permission-modal .permission-side-copy,.building-permission-modal .permission-scope-note{font-size:11px;line-height:1.5;font-weight:400}
+      .building-permission-modal .permission-title-row{font-size:14px;font-weight:600}
+      .building-permission-modal .permission-tree-root strong{font-size:12px;font-weight:600}
+      .building-permission-modal .permission-tree-text strong{font-size:12px;font-weight:400;line-height:1.4}
+      .building-permission-modal .permission-tree-item{min-height:27px}
+      .building-permission-modal .permission-actions button{font-size:11px;font-weight:500}
+      .building-permission-modal .permission-modal-actions button{font-size:14px;font-weight:600}
       .permission-modal-head h2{margin-top:2px;font-size:20px}
       .permission-modal-head p{max-width:760px;margin-top:4px;font-size:11px;line-height:1.4}
       .permission-layout-form{display:grid!important;grid-template-columns:minmax(0,1.12fr) minmax(365px,.88fr);grid-template-rows:minmax(0,1fr) auto;align-items:stretch;gap:0!important;margin:0!important;min-height:0;overflow:hidden}
