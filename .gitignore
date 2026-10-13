@@ -9,3 +9,9 @@ test-results/
 !.env.example
 *.log
 playwright-report/
+
+# Local gateway runtime files and secrets
+**/capacity-gateway/config.json
+**/capacity-gateway/*.sqlite*
+**/capacity-gateway/*key.pem
+**/capacity-gateway/__pycache__/

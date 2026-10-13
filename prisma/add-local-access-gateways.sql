@@ -1,0 +1,4 @@
+CREATE TABLE IF NOT EXISTS "local_access_gateways" (
+ "id" TEXT PRIMARY KEY, "serial" TEXT NOT NULL UNIQUE, "host" TEXT NOT NULL,
+ "tokenHash" TEXT NOT NULL UNIQUE, "enabled" BOOLEAN NOT NULL DEFAULT TRUE
+);

@@ -1,0 +1,13 @@
+# Local parking capacity gateway
+
+Controller 80M236 uses the approved gateway PC 192.168.0.27:8765 on its LAN. TLS 1.2 is retained. Gateway configuration, credentials, certificate key, SQLite ledger and logs live in the PC workspace `.gateway` directory and must not be committed.
+
+The controller must use **Only Online** when its server is the local gateway. Internet outages do not stop local authorization. If the PC or LAN is unavailable, entry fails closed; native Offline first would bypass shared capacity. Keep the PC powered, on the LAN, and prevent sleep. Do not connect another independent entry controller to the cloud for the same capacity pool: all entry decisions for that pool must share this gateway ledger.
+
+The ledger enforces building total, owner pool, company pool, and company owner/employee limits. Registration inputs forward to the cloud and require internet. Four owner spaces allow any four of five registered cards inside; the fifth is denied until an exit frees a space. Checks and outbox writes are one SQLite transaction. Restart retains occupancy and unsent scans. The server acknowledges deduplicated event IDs; records are removed from the outbox only after acknowledgement. Cloud snapshots cannot overwrite unsent local changes. Blocked cards cannot enter, but known inside cards can exit. Cached permissions expire after 24 hours without renewal; entry then stops while exit remains possible.
+
+Administrative manual exits and allocation/block updates reach the gateway after cloud synchronization. During an internet outage, the latest cached limits apply. Native controller memory is not the capacity authority in this setup.
+
+Run: `python gateway.py --config PATH_TO_PRIVATE_CONFIG`. Test: `python -m unittest discover -s scripts/capacity-gateway -p test_gateway.py`.
+
+After installation, test online and with only the **internet** disconnected: enter four different cards, deny the fifth, exit one, then allow the fifth. Do not unplug the controller-to-PC LAN for an internet-outage test.

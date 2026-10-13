@@ -441,3 +441,12 @@ model ManualExitNotificationRead {
   @@index([userId])
   @@map("manual_exit_notification_reads")
 }
+
+model LocalAccessGateway {
+  id String @id @default(cuid())
+  serial String @unique
+  host String
+  tokenHash String @unique
+  enabled Boolean @default(true)
+  @@map("local_access_gateways")
+}
