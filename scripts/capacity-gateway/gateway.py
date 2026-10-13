@@ -43,7 +43,7 @@ class Ledger:
             row=c.execute('SELECT manifest FROM settings WHERE serial=?',(serial,)).fetchone()
             return json.loads(row['manifest'])['directions'].get(reader,'DISABLED') if row else 'DISABLED'
     def pending(self,serial):
-        with self.db() as c:return [json.loads(r['event']) for r in c.execute('SELECT event FROM outbox WHERE serial=? ORDER BY rowid LIMIT 100',(serial,))]
+        with self.db() as c:return [json.loads(r['event']) for r in c.execute('SELECT event FROM outbox WHERE serial=? ORDER BY rowid LIMIT 20',(serial,))]
     def acknowledge(self,ids):
         with self.db() as c:c.executemany('DELETE FROM outbox WHERE id=?',[(i,) for i in ids])
     def scan(self,serial,reader,card,now=None):
@@ -113,7 +113,7 @@ class Gateway:
             def log_message(self,*args):pass
             def do_GET(self):
                 if self.path=='/health':
-                    self.send_response(200);self.send_header('Content-Type','application/json');self.end_headers();self.wfile.write(json.dumps({'ok':True,'cloudError':gateway.last_sync_error,'queued':len(gateway.ledger.pending(gateway.config['serial']))}).encode());return
+                    self.send_response(200);self.send_header('Content-Type','application/json');self.end_headers();self.wfile.write(json.dumps({'ok':True,'cloudError':gateway.last_sync_error,'queued':len(gateway.ledger.pending(gateway.config['serial'])),'controllerContact':gateway.contact}).encode());return
                 self.do_POST()
             def do_POST(self):
                 try:
