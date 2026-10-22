@@ -1,6 +1,6 @@
 # Local parking capacity gateway
 
-Controller 80M236 uses the approved gateway PC 192.168.0.27:8765 on its LAN. TLS 1.2 is retained. Gateway configuration, credentials, certificate key, SQLite ledger and logs live in `%LOCALAPPDATA%\SRTEC\CapacityGateway` and must not be committed.
+This optional gateway provides strict shared parking-capacity enforcement on a controller's local network. It is an alternative to controller-native Offline first operation, described in `../../docs/cloudc-offline.md`. TLS 1.2 is supported. Gateway configuration, credentials, certificate key, SQLite ledger and logs live in `%LOCALAPPDATA%\SRTEC\CapacityGateway` and must not be committed.
 
 The controller must use **Only Online** when its server is the local gateway. Internet outages do not stop local authorization. If the PC or LAN is unavailable, entry fails closed; native Offline first would bypass shared capacity. Keep the PC powered, on the LAN, and prevent sleep. Do not connect another independent entry controller to the cloud for the same capacity pool: all entry decisions for that pool must share this gateway ledger.
 
@@ -8,7 +8,7 @@ The ledger enforces building total, owner pool, company pool, and company owner/
 
 Administrative manual exits and allocation/block updates reach the gateway after cloud synchronization. During an internet outage, the latest cached limits apply. Native controller memory is not the capacity authority in this setup.
 
-Windows sign-in starts the installed gateway automatically. Keep the PC awake and logged in. Its TLS certificate/key and credential are private to the Windows user. The current controller configuration is backed up in the private runtime directory.
+For a gateway installation, configure Windows sign-in startup and keep the PC awake and logged in. Disable gateway startup when switching to direct controller-native operation. Its TLS certificate/key and credential are private to the Windows user. The current controller configuration is backed up in the private runtime directory.
 
 Run: `python gateway.py --config PATH_TO_PRIVATE_CONFIG`. Test: `python -m unittest discover -s scripts/capacity-gateway -p test_gateway.py`.
 

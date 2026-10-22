@@ -1,10 +1,10 @@
 # Cloud C automatic offline verification
 
-A powered Cloud C controller configured with Access Check = Online first automatically uses its existing stored card permissions when the online server cannot be reached. This is controller firmware behavior, not an HTTP-to-TCP switch, and does not depend on a website request succeeding.
+For controller-native operation, set **Access Check = Offline first** and configure the controller to contact the application server directly over HTTPS. Registered cards must be synchronized and acknowledged in controller memory before testing. The powered controller can then authorize stored cards and pulse its entry/exit outputs without a LAN connection. **Online first** is a different mode: it tries server authorization before falling back to stored permissions.
 
-The memory is shared by reader inputs A and B. The website shows one controller-level explanation on the Super Admin-only **Offline Sync** sidebar page; there are no card-slot, timezone, capacity or enable fields in this flow. Online reader purposes remain configurable as before. Offline decisions follow the controller's own saved configuration, which must be tested when physical input purposes are changed.
+The memory is shared by reader inputs A and B. The Super Admin-only **Offline Sync** page shows uploaded native controller history alongside gateway records, labeled by source. Native offline decisions follow saved controller permissions and input settings. Verify both physical entry and exit behavior after changing operating modes.
 
-Only cards already present in controller memory can be verified offline. This UI change does not automatically copy cards registered on the website to the controller. Existing controller cards are not cleared or overwritten by the informational panel. Unknown cards cannot be verified from the website while the controller is disconnected. A powered-off controller cannot verify any cards.
+Only cards already present in controller memory can be verified offline. Where app-managed card-memory sync is enabled, wait until all applicable grant/revocation commands are acknowledged; creating a website record alone is not proof of a stored controller grant. Unknown cards cannot be checked against the website while disconnected. A powered-off controller cannot verify cards.
 
 Current website card blocks, parking capacity and live occupancy cannot be checked while disconnected. Reconnecting uploads controller card/alarm history, which is durably saved and deduplicated before acknowledgement. History is not replayed as a fresh authorization. On verified controller 80M236, successful native entry code 11 and exit code 10 reconcile registered vehicle occupancy and activity. Invalid cards and alarms do not change occupancy. Repeated uploads are deduplicated, online scan copies are linked, and older scans cannot override newer vehicle status. Existing successful history is repaired in batches on authenticated heartbeats.
 
@@ -31,3 +31,11 @@ On 80M236, registered vehicles can enter online only after their offline memory 
 ## Online-first transition diagnostics
 
 Online first is retained with the existing 1.5-second verification wait and five-second heartbeat interval. Stored-history backfill runs with Next.js after() after the heartbeat response; it no longer delays the controller?s key/command acknowledgement. Slow HTTP handlers log CLOUDC_HTTP_SLOW with elapsed milliseconds and stage, without tokens or card numbers. Native firmware connection detection remains separate from the configured per-scan wait; a physical network-loss test is required to measure the transition.
+
+## Native offline reconnection and capacity limitations
+
+Keep the controller powered while disconnecting only its network for a native offline test. Test entry and exit using synchronized cards, reconnect the network, and verify the uploaded records. The server saves and deduplicates each native history record before returning its original record index as acknowledgement. Failed saves must not be acknowledged, so the controller can retry. Uploaded records remain available on the website; acknowledgement retires the controller's pending upload through its firmware protocol rather than issuing a blanket memory-clear command.
+
+Native Offline first does not guarantee shared building, owner or company parking limits. It can admit stored cards before the server checks occupancy, including while internet access is available. Strict shared limits require the local gateway architecture documented in `scripts/capacity-gateway/README.md`, with Only Online authorization against that gateway and working controller-to-gateway LAN connectivity.
+
+A native Offline first installation does not use the capacity gateway as its authorization server. Stop the unused gateway helper and disable its automatic startup when switching to direct native operation. Retain its database and private configuration for rollback. Firmware settings are changed locally; a GitHub push or website deployment alone does not change a physical controller's mode.
