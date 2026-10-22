@@ -1,0 +1,63 @@
+/* Compact dashboard density at normal browser zoom. Mobile retains larger touch targets. */
+@media (min-width: 951px) {
+  .dashboard-page { grid-template-columns:184px minmax(0,1fr); font-size:14px; }
+  .dashboard-page .dashboard-main { padding:18px 22px 30px; }
+  .dashboard-page .sidebar-shell { padding:10px 8px 8px; }
+  .dashboard-page .sidebar-shell .sidebar-brand { gap:7px; padding:1px 3px 9px; }
+  .dashboard-page .sidebar-shell .logo-box { width:30px; height:30px; flex-basis:30px; border-radius:7px; font-size:14px; }
+  .dashboard-page .sidebar-brand-copy { gap:3px; }
+  .dashboard-page .sidebar-brand-copy strong { font-size:11px; letter-spacing:0; }
+  .dashboard-page .sidebar-shell .sidebar-role-pill { min-height:16px; padding:2px 5px; font-size:9px!important; }
+  .dashboard-page .sidebar-divider { margin-bottom:7px; }
+  .dashboard-page .sidebar-shell .sidebar-nav { gap:3px; }
+  .dashboard-page .sidebar-shell .sidebar-nav-parent,
+  .dashboard-page .sidebar-shell .sidebar-nav-link { min-height:32px; padding:4px 6px; font-size:12px; border-radius:6px; }
+  .dashboard-page .sidebar-shell .sidebar-nav-parent,
+  .dashboard-page .sidebar-shell .sidebar-nav-link,
+  .dashboard-page .sidebar-shell .sidebar-submenu-link { grid-template-columns:22px minmax(0,1fr) auto; gap:5px; }
+  .dashboard-page .sidebar-shell .sidebar-nav-icon { width:22px; height:22px; border-radius:5px; }
+  .dashboard-page .sidebar-shell .sidebar-nav-icon svg { width:15px; height:15px; }
+  .dashboard-page .sidebar-shell .sidebar-submenu-link { min-height:28px; padding:3px 5px 3px 7px; font-size:11px; border-radius:5px; }
+  .dashboard-page .sidebar-shell .sidebar-submenu { gap:2px; padding-left:10px; }
+  .dashboard-page .sidebar-shell .sidebar-submenu:before { left:10px; }
+  .dashboard-page .sidebar-shell .sidebar-reader-status { padding-top:7px!important; margin-top:6px!important; }
+  .dashboard-page .topbar { gap:14px; padding-bottom:12px; }
+  .dashboard-page .topbar h1 { margin-top:3px; font-size:23px; line-height:1.25; }
+  .dashboard-page .section-kicker { font-size:11px; letter-spacing:.04em; }
+  .dashboard-page .summary-card { min-height:44px; padding:5px 9px; }
+  .dashboard-page .summary-card span { font-size:11px; }
+  .dashboard-page .summary-card strong { margin-top:3px; font-size:13px; }
+  .dashboard-page .portfolio-card { margin-top:13px; padding:14px; }
+  .dashboard-page .portfolio-header { gap:12px; }
+  .dashboard-page .portfolio-header h2 { font-size:19px; margin:4px 0; }
+  .dashboard-page .portfolio-header p { font-size:13px; }
+  .dashboard-page .portfolio-divider { margin:11px 0 12px; }
+  .dashboard-page :is(.primary-button,.secondary-button,.add-building-button,.logout-button,.link-button) { min-height:32px; padding:6px 10px; font-size:12px; line-height:1.4; }
+  .dashboard-page .plus-icon { width:17px; height:17px; font-size:16px; }
+  .dashboard-page .dashboard-main :where(input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=hidden]):not([type=search]), select:not([class*="modernSelect"])) { min-height:34px; padding:6px 10px; font-size:13px; }
+  .dashboard-page textarea { padding:7px 10px; font-size:13px; }
+  .dashboard-page .building-search-field input { height:34px; padding-left:34px; }
+  .dashboard-page .building-grid { grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:11px; }
+  .dashboard-page .building-card { padding:10px; }
+  .dashboard-page .building-card h3 { margin-top:3px; font-size:16px; }
+  .dashboard-page :is(.tiny-label,.building-code) { font-size:11px; }
+  .dashboard-page .building-code { padding:3px 5px; }
+  .dashboard-page .stats-grid { grid-template-columns:repeat(4,minmax(0,1fr)); gap:6px; margin-top:8px; }
+  .dashboard-page .stat-box { min-height:48px; padding:5px 7px; }
+  .dashboard-page .stat-box span { font-size:11px; }
+  .dashboard-page .stat-box strong { margin-top:2px; font-size:18px; line-height:1.2; }
+  .dashboard-page .building-footer { margin-top:8px; padding-top:7px; font-size:11px; }
+  .dashboard-page .building-footer a { padding:4px 8px; font-size:12px; }
+  .dashboard-page .create-building-card { min-height:160px; gap:10px; padding:16px 12px; font-size:14px; }
+  .dashboard-page .create-building-icon { width:36px; height:36px; font-size:25px; }
+  .dashboard-page :is(.building-summary-grid,.account-parking-grid,.account-company-parking-grid) { gap:8px; }
+  .dashboard-page .large-stat { min-height:66px; padding:8px 10px; }
+  .dashboard-page .large-stat span { font-size:12px; }
+  .dashboard-page .large-stat strong { margin-top:4px; font-size:22px; line-height:1.2; }
+  .dashboard-page .parking-input-card { padding:8px; }
+  .dashboard-page .parking-input-card>span { margin-bottom:5px; font-size:12px; }
+  .dashboard-page .modal-card:not(.permission-modal) { padding:18px; }
+  .dashboard-page .modal-head h2 { font-size:20px; }
+  .dashboard-page .modal-form { gap:12px; }
+  .dashboard-page .modal-form label { gap:5px; font-size:12px; }
+}

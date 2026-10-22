@@ -6,3 +6,5 @@
 .button:hover { background: #f3eef8; border-color: #8a58ae; }
 .button:focus-visible { outline: 2px solid #8246ad; outline-offset: 2px; }
 .button:disabled { opacity: .6; cursor: wait; }
+
+@media(min-width:951px){.control{gap:7px;margin-top:7px;padding-top:7px}.control>span{padding:3px 6px;font-size:11px}.button{padding:4px 7px;font-size:11px}}

@@ -149,3 +149,33 @@
 .scanTable [hidden]{display:none!important}
 .scanTableCard{overflow:visible}
 @media(max-width:800px){.scanTableHeader{flex-direction:row;align-items:center}}
+
+/* Compact desktop/tablet monitor and active-card dialog. */
+@media(min-width:701px){
+ .headcount{margin-top:13px}
+ .titleRow{gap:14px}.titleRow h2{font-size:22px;margin:3px 0}.titleRow p{font-size:12px;line-height:1.4}
+ .clock{min-width:140px;padding:7px 10px;border-radius:7px}.clock strong{font-size:12px}.clock span{margin-top:3px;font-size:12px}
+ .filterGrid{gap:12px}.filterField{gap:5px}.filterField>span{font-size:11px}
+ .modernSelect{min-height:34px;padding:0 32px 0 10px;font-size:13px;font-weight:600}
+ .totals{gap:10px}.totalCard{min-height:88px;padding:10px;border-radius:11px}
+ .totalCard span{font-size:15px;font-weight:700}.totalCard strong{margin-top:4px;font-size:30px}
+ .clickableTotal small{margin-top:4px;font-size:11px}
+ .scanTableCard{margin-top:13px;padding:0!important}
+ .scanTableHeader{padding:11px 13px;gap:10px;flex-direction:row;align-items:center}.scanTableHeader h2{font-size:18px;margin:3px 0 0}
+ .tableWrap{max-height:460px}.scanTable th{padding:7px 8px;font-size:10px;letter-spacing:.035em;line-height:1.35}
+ .scanTable td{padding:6px 8px;font-size:12px;line-height:1.4}
+ .actionBadge{min-width:44px;padding:3px 6px;font-size:10px;font-weight:700}
+ .emptyTable{padding:18px!important;font-size:12px}
+ .activeCardsBackdrop{padding:16px}.activeCardsModal{width:min(920px,calc(100vw - 32px));max-height:calc(100dvh - 40px);border-radius:10px}
+ .activeCardsHeader{padding:12px 15px;gap:12px}.activeCardsHeader h2{font-size:20px;margin:3px 0}.activeCardsHeader p{font-size:12px}
+ .activeCardsTableWrap{max-height:min(420px,calc(100dvh - 160px))}.activeCardsTable{min-width:800px}
+ .activeCardsTable th{padding:7px 8px;font-size:10px;letter-spacing:.025em}.activeCardsTable td{padding:7px 8px;font-size:12px;line-height:1.4}
+ .manualExitButton{padding:5px 8px;font-size:11px}
+ .scanPopup{width:340px;padding:12px 33px 12px 12px;gap:10px}.popupIcon{width:32px;height:32px;font-size:11px}
+ .popupBody h3{font-size:16px;margin:3px 0}.popupBody p{font-size:12px}.popupEyebrow{font-size:10px}
+ .popupMeta{gap:6px;margin-top:8px}.popupMeta span{padding:6px 8px;font-size:12px}.popupMeta strong{font-size:9px}
+ .employeeParkingCard{margin-top:13px}.employeeParkingHeader h2{font-size:20px}.employeeParkingHeader p{font-size:12px}
+ .employeeParkingTotals{gap:8px;min-width:250px}.employeeParkingTotals>div{padding:9px 10px;border-radius:9px}
+ .employeeParkingTotals span{font-size:11px}.employeeParkingTotals strong{font-size:23px;margin-top:3px}
+ .companyParkingCard{padding:11px 12px;border-radius:10px}.companyParkingCard h3{font-size:15px;margin-bottom:9px}
+}
