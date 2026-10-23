@@ -12,6 +12,7 @@ function fixture() {
   const gate = { direction: "ENTRY_EXIT::ENTRY_READER::a::EXIT_READER::b" };
   const tx = {
     $executeRaw: async () => {},
+    building: { findUnique: async () => ({ antiPassbackEnabled: state.antiPassbackEnabled !== false }) },
     rfidEvent: { findMany: async () => [] },
     cloudCOffline: {
       upsert: async () => state.config,
@@ -132,3 +133,5 @@ test("Missing or unacknowledged card memory cannot grant online entry",async()=>
   const f=entryFixture();Object.assign(f.state.config,change);assert.match(await f.cloudOfflineEntryGuard(f.packet),/not ready/);
  }
 });
+
+test("Changing anti-passback replans the native timezone access bit",async()=>{ const f=fixture();await f.planOffline(f.tx,f.serial,true);let frame=Buffer.from(f.state.commands.find(c=>Buffer.from(c.frame,"hex")[2]===13).frame,"hex");assert.equal(frame[13],0x81);f.state.antiPassbackEnabled=false;await f.planOffline(f.tx,f.serial,true);frame=Buffer.from(f.state.commands.filter(c=>c.status==="PENDING" && Buffer.from(c.frame,"hex")[2]===13).at(-1).frame,"hex");assert.equal(frame[13],0x01); });

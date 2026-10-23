@@ -1,0 +1,2 @@
+ALTER TABLE "buildings" ADD COLUMN IF NOT EXISTS "parkingLimitsEnabled" BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE "buildings" ADD COLUMN IF NOT EXISTS "antiPassbackEnabled" BOOLEAN NOT NULL DEFAULT true;

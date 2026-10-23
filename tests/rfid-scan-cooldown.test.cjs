@@ -2,11 +2,11 @@ const test=require("node:test"),assert=require("node:assert/strict"),fs=require(
 function fixture(){
  const reader={id:"r",deviceNumber:"reader",enabled:true,buildingId:"building",mode:"ENTRY_EXIT"};
  const owner={id:"owner",buildingId:"building",isInside:true,lastAccessAt:new Date(Date.now()-10000),lastAccessDevice:"reader",rfidBlocked:false};
- const state={reader,owner,events:[],previous:null,query:null,direction:"ENTRY"};
+ const state={reader,owner,events:[],previous:null,query:null,direction:"ENTRY",policy:{enabled:true,parkingLimitsEnabled:true,antiPassbackEnabled:true}};
  const tx={$queryRaw:async()=>[],rfidReader:{upsert:async()=>reader},rfidEvent:{
   findFirst:async({where})=>{state.query=where;return state.previous&&state.previous.readerId===where.readerId&&state.previous.action!=="DUPLICATE"&&state.previous.createdAt>where.createdAt.gt?state.previous:null;},
   create:async({data})=>state.events.push(data)},
-  building:{findUniqueOrThrow:async()=>({enabled:true})},
+  building:{findUniqueOrThrow:async()=>state.policy},
   vehicle:{findUnique:async()=>null},buildingOwnerVehicle:{findUnique:async()=>owner,update:async({data})=>Object.assign(owner,data)},
   gate:{findMany:async()=>[{direction:state.direction+"::READER::r"}]},
  };
@@ -38,3 +38,8 @@ test("Ignored duplicate attempts do not extend the pause",async()=>{
  const f=fixture();f.state.direction="EXIT";f.state.previous={readerId:"r",action:"DUPLICATE",createdAt:new Date()};
  assert.equal((await f.scan()).code,"0000");assert.equal(f.state.query.action.not,"DUPLICATE");
 });
+
+test("Anti-passback can be disabled independently of capacity",async()=>{ const f=fixture();f.state.policy.antiPassbackEnabled=false;assert.equal((await f.scan()).code,"0000");assert.equal(f.state.owner.isInside,true);assert.equal(f.state.events[0].action,"ENTRY"); });
+test("An outside vehicle exits again when anti-passback is disabled",async()=>{ const f=fixture();f.state.policy.antiPassbackEnabled=false;f.state.owner.isInside=false;f.state.direction="EXIT";assert.equal((await f.scan()).code,"0000");assert.equal(f.state.owner.isInside,false); });
+test("Disabling limits preserves anti-passback",async()=>{ const f=fixture();f.state.policy.parkingLimitsEnabled=false;assert.equal((await f.scan()).code,"0001");assert.equal(f.state.events[0].action,"DUPLICATE"); });
+test("Disabling limits allows a new registered entry without querying capacities",async()=>{ const f=fixture();f.state.policy.parkingLimitsEnabled=false;f.state.owner.isInside=false;assert.equal((await f.scan()).code,"0000");assert.equal(f.state.owner.isInside,true); });

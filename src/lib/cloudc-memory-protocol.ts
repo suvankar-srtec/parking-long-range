@@ -75,7 +75,7 @@ export function deleteCardCommand(index: number) {
 
 }
 
-export function timezoneCommand(index: number, until: Date, utcOffsetMinutes = 0) {
+export function timezoneCommand(index: number, until: Date, utcOffsetMinutes = 0, antiPassbackEnabled = true) {
 
   if (!Number.isInteger(index) || index < 0 || index > 15) throw new Error("Invalid timezone slot");
 
@@ -83,7 +83,7 @@ export function timezoneCommand(index: number, until: Date, utcOffsetMinutes = 0
 
   // Access bit 7 enables native anti-passback; low bits retain Card identification.
   // Verified by acknowledged HTTP command and controller APB checkbox on 80M236.
-  return memoryFrame(0x0d, Buffer.from([index, 0, 0, 23, 59, 255, 0x81, ...date.subarray(0, 3), 0, 0]));
+  return memoryFrame(0x0d, Buffer.from([index, 0, 0, 23, 59, 255, antiPassbackEnabled ? 0x81 : 0x01, ...date.subarray(0, 3), 0, 0]));
 
 }
 

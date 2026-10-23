@@ -1,5 +1,5 @@
 """LAN gateway: SQLite capacity checks, crash-safe outbox, cloud reconciliation."""
-import argparse, contextlib, datetime as dt, hmac, json, logging, pathlib, sqlite3, ssl, threading, time, urllib.request, urllib.parse, uuid
+import argparse, contextlib, datetime as dt, hmac, json, logging, pathlib, re, sqlite3, ssl, threading, time, urllib.request, urllib.parse, uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 def utc(ms=None):
@@ -21,6 +21,8 @@ class Ledger:
     def db(self):
         c=sqlite3.connect(self.path,timeout=10);c.row_factory=sqlite3.Row
         try:
+            # Persist the occupancy change and queued event before approving a relay.
+            c.execute('PRAGMA synchronous=FULL')
             c.execute("BEGIN IMMEDIATE");yield c;c.commit()
         except Exception:c.rollback();raise
         finally:c.close()
@@ -44,8 +46,28 @@ class Ledger:
             return json.loads(row['manifest'])['directions'].get(reader,'DISABLED') if row else 'DISABLED'
     def pending(self,serial):
         with self.db() as c:return [json.loads(r['event']) for r in c.execute('SELECT event FROM outbox WHERE serial=? ORDER BY rowid LIMIT 20',(serial,))]
+    def pending_count(self,serial):
+        with self.db() as c:return c.execute('SELECT COUNT(*) FROM outbox WHERE serial=?',(serial,)).fetchone()[0]
     def acknowledge(self,ids):
         with self.db() as c:c.executemany('DELETE FROM outbox WHERE id=?',[(i,) for i in ids])
+    def reconcile_native_history(self,packet,utc_offset_minutes=0):
+        # Only these successful movement codes are verified on this controller.
+        if str(packet.get('Serial'))!='80M236' or str(packet.get('type',packet.get('Type')))!='100':return
+        event=str(packet.get('EventType'))
+        if event not in ('10','11'):return
+        try:
+            raw=str(packet.get('EventTime',''))
+            date=dt.datetime.strptime(raw,'%Y%m%d%H%M%S') if re.fullmatch(r'\d{14}',raw) else dt.datetime.fromisoformat(raw.replace('/','-').replace('Z','+00:00'))
+            if date.tzinfo is None:date=date.replace(tzinfo=dt.timezone(dt.timedelta(minutes=utc_offset_minutes)))
+            at=int(date.timestamp()*1000)
+            if at>int(time.time()*1000)+300000:return
+        except (ValueError,OverflowError):return
+        with self.db() as c:
+            row=c.execute('SELECT manifest FROM settings WHERE serial=?',(packet['Serial'],)).fetchone()
+            if row:
+                building=json.loads(row['manifest'])['buildingId']
+                c.execute('UPDATE cards SET inside=?,access_ms=? WHERE building=? AND card=? AND access_ms<?',
+                          (int(event=='11'),at,building,str(packet.get('Card','')),at))
     def scan(self,serial,reader,card,now=None):
         now=int(time.time()*1000) if now is None else now
         with self.db() as c:
@@ -64,12 +86,14 @@ class Ledger:
             direction=m['directions'].get(reader,'DISABLED')
             if direction not in ['ENTRY','EXIT','ENTRY_EXIT']:return finish('DENIED','Reader purpose is not configured for access')
             enter=direction=='ENTRY' or direction=='ENTRY_EXIT' and not row['inside']
-            if enter and row['inside']:return finish('DUPLICATE','Duplicate entry: vehicle is already inside')
+            if enter and row['inside'] and m.get('antiPassbackEnabled',True):return finish('DUPLICATE','Duplicate entry: vehicle is already inside')
             if not enter:
-                if not row['inside']:return finish('IGNORED','Vehicle is already outside')
+                if not row['inside'] and m.get('antiPassbackEnabled',True):return finish('IGNORED','Vehicle is already outside')
                 return finish('EXIT','Exit allowed by local gateway',False)
             if now>=millis(m['leaseUntil']):return finish('DENIED','Offline permissions expired; restore internet connection')
             if not row['allowed']:return finish('DENIED','RFID card is blocked or inactive')
+            if not m.get('parkingLimitsEnabled',True) or row['inside']:
+                return finish('ENTRY','Entry allowed by local gateway',True)
             counts=c.execute('SELECT pool,company,category,COUNT(*) n FROM cards WHERE building=? AND inside=1 GROUP BY pool,company,category',(b,)).fetchall()
             total=sum(r['n'] for r in counts)+m.get('visitorInside',0)
             owners=sum(r['n'] for r in counts if r['pool']=='owner')
@@ -86,11 +110,57 @@ class Ledger:
 class Gateway:
     def __init__(self,config):
         self.config=config;self.ledger=Ledger(config['database']);self.contact=None;self.stop=threading.Event();self.last_sync_error=None;self.last_scan_reply=None;self.scan_ready=threading.Event();self.last_config_error=None
+        self.cloud_paused_until=0
+        self.native_lock=threading.Lock();self.native_ready=threading.Event()
+        self.native_packet=None;self.native_command={};self.native_error=None
+    def pause_cloud_for_test(self,seconds):
+        if not isinstance(seconds,int) or isinstance(seconds,bool) or not 0<=seconds<=300:
+            raise ValueError('Offline test must last between 0 and 300 seconds')
+        self.cloud_paused_until=time.monotonic()+seconds
+    def offline_test_remaining(self):
+        return max(0,int(self.cloud_paused_until-time.monotonic()+0.999))
     def cloud(self,path,data=None,controller=False):
+        if time.monotonic()<self.cloud_paused_until:
+            raise OSError('Temporary offline test: cloud requests paused; local authorization remains active')
         headers={'Content-Type':'application/json'}
         if not controller:headers['x-gateway-token']=self.config['gateway_token']
         request=urllib.request.Request(self.config['cloud_base']+path,data=None if data is None else json.dumps(data).encode(),headers=headers)
         with urllib.request.urlopen(request,timeout=15) as response:return response.read()
+    def native_heartbeat_fields(self,packet):
+        if not self.config.get('native_fallback'):return {}
+        with self.native_lock:
+            self.native_packet={key:str(packet[key]) for key in ('Serial','Key','IndexCmd','CmdOK') if key in packet}
+            command=dict(self.native_command)
+        self.native_ready.set()
+        # Do not execute an already acknowledged command while the cloud catches up.
+        if command.get('IndexCmd')==str(packet.get('IndexCmd')) and str(packet.get('CmdOK'))=='1':return {}
+        return command
+    def sync_native_memory_once(self):
+        with self.native_lock:packet=dict(self.native_packet) if self.native_packet else None
+        if not packet:return
+        raw=self.cloud('/api/AcsDataApi/RequestStatus?'+urllib.parse.urlencode({'token':self.config['controller_token']}),packet,True).decode()
+        response=json.loads(raw[5:] if raw.startswith('DATA=') else raw)
+        command={}
+        if response.get('CmdValue'):
+            index=str(response.get('IndexCmd',''));value=str(response['CmdValue'])
+            if not re.fullmatch(r'\d{1,10}',index) or not re.fullmatch(r'[0-9a-fA-F]{18,2048}',value):raise ValueError('Invalid memory command')
+            frame=bytes.fromhex(value)
+            # Memory updates only: never proxy relay/alarm/fire commands in heartbeats.
+            if frame[0]!=2 or frame[-1]!=3 or frame[2] not in (0x0d,0xc1,0x15) or int.from_bytes(frame[5:7],'little')!=len(frame)-9:raise ValueError('Unexpected memory command')
+            checksum=0
+            for byte in frame[:-2]:checksum^=byte
+            if checksum!=frame[-2]:raise ValueError('Invalid memory checksum')
+            command={'IndexCmd':index,'CmdValue':value}
+        with self.native_lock:self.native_command=command
+        self.native_error=None
+    def sync_native_memory(self):
+        while not self.stop.is_set():
+            self.native_ready.clear()
+            try:self.sync_native_memory_once()
+            except Exception as error:
+                self.native_error=type(error).__name__
+                logging.warning('Native memory synchronization unavailable (%s)',type(error).__name__)
+            self.native_ready.wait(5)
     def heartbeat(self):
         # Do not let queued scan uploads or manifest refreshes delay contact reports.
         while not self.stop.is_set():
@@ -141,7 +211,7 @@ class Gateway:
 
             def do_GET(self):
                 if self.path=='/health':
-                    self.reply(json.dumps({'ok':True,'cloudError':gateway.last_sync_error,'configError':gateway.last_config_error,'queued':len(gateway.ledger.pending(gateway.config['serial'])),'controllerContact':gateway.contact,'lastScanReply':gateway.last_scan_reply}).encode(),content_type='application/json');return
+                    self.reply(json.dumps({'ok':True,'cloudError':gateway.last_sync_error,'configError':gateway.last_config_error,'queued':gateway.ledger.pending_count(gateway.config['serial']),'controllerContact':gateway.contact,'lastScanReply':gateway.last_scan_reply,'offlineTestRemainingSeconds':gateway.offline_test_remaining(),'nativeFallbackEnabled':bool(gateway.config.get('native_fallback')),'nativeMemoryError':gateway.native_error}).encode(),content_type='application/json');return
                 self.do_POST()
             def do_POST(self):
                 started=time.monotonic()
@@ -157,8 +227,13 @@ class Gateway:
                     if path.path.endswith('RequestStatus'):
                         if not str(packet.get('Key','')).isdigit():raise ValueError('Missing heartbeat key')
                         fields={'Key':str(packet['Key'])}
+                        fields.update(gateway.native_heartbeat_fields(packet))
                     elif str(packet.get('type',packet.get('Type',''))) in ['100','101']:
                         raw=gateway.cloud('/api/AcsDataApi/RequestCardEvent?'+urllib.parse.urlencode({'token':gateway.config['controller_token']}),packet,True)
+                        ack=json.loads(raw.decode().removeprefix('DATA='))
+                        index='IndexEvent' if str(packet.get('type',packet.get('Type')))=='100' else 'IndexAlarm'
+                        if str(ack.get(index,''))==str(packet.get(index,'')) and packet.get(index) is not None:
+                            gateway.ledger.reconcile_native_history(packet,gateway.config.get('controller_utc_offset_minutes',0))
                         self.reply(raw);return
                     elif str(packet.get('type',packet.get('Type','')))=='0' and str(packet.get('Reader')) in ['0','1']:
                         if gateway.ledger.direction(gateway.config['serial'],str(packet['Reader']))=='REGISTER':
@@ -191,10 +266,15 @@ class ConcurrentTLSServer(ThreadingHTTPServer):
         super().process_request_thread(secure,client_address)
 
 def main():
-    parser=argparse.ArgumentParser();parser.add_argument('--config',required=True);args=parser.parse_args()
+    parser=argparse.ArgumentParser();parser.add_argument('--config',required=True)
+    parser.add_argument('--offline-test-seconds',type=int,default=0,help='Temporarily pause only cloud requests, for 0-300 seconds; LAN stays active')
+    args=parser.parse_args()
+    if not 0<=args.offline_test_seconds<=300:parser.error('--offline-test-seconds must be between 0 and 300')
     config=json.loads(pathlib.Path(args.config).read_text(encoding='utf-8-sig'))
     logging.basicConfig(level=logging.INFO,format='%(asctime)s %(message)s',filename=config.get('log'))
-    gateway=Gateway(config);threading.Thread(target=gateway.sync,daemon=True).start();threading.Thread(target=gateway.heartbeat,daemon=True).start();threading.Thread(target=gateway.refresh,daemon=True).start()
+    gateway=Gateway(config);gateway.pause_cloud_for_test(args.offline_test_seconds)
+    threading.Thread(target=gateway.sync,daemon=True).start();threading.Thread(target=gateway.heartbeat,daemon=True).start();threading.Thread(target=gateway.refresh,daemon=True).start()
+    if config.get('native_fallback'):threading.Thread(target=gateway.sync_native_memory,daemon=True).start()
     server_class=ConcurrentTLSServer if config.get('certificate') else ThreadingHTTPServer
     server=server_class((config.get('bind','0.0.0.0'),config.get('port',8765)),gateway.handler())
     if config.get('certificate'):

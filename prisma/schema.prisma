@@ -51,6 +51,8 @@ model User {
 }
 
 model Building {
+  parkingLimitsEnabled Boolean @default(true)
+  antiPassbackEnabled Boolean @default(true)
   enabled        Boolean @default(true)
   id             String @id @default(cuid())
   name           String @unique

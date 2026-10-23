@@ -77,7 +77,9 @@ export async function planOffline(tx: Prisma.TransactionClient, serial: string, 
 
   if (cards.length > config.slotCount) throw new ParkingError("Offline card capacity exceeded; the reserved range is too small.");
 
-  const fingerprint = digest(JSON.stringify(["native-apb-revocation-v2", buildingId, config.enabled, cards]));
+  const policy = buildingId ? await tx.building.findUnique({ where: { id: buildingId }, select: { antiPassbackEnabled: true } }) : null;
+  const antiPassbackEnabled = policy?.antiPassbackEnabled !== false;
+  const fingerprint = digest(JSON.stringify(["native-apb-policy-v3", buildingId, config.enabled, cards, antiPassbackEnabled]));
 
   const renew = config.enabled && (!config.plannedAt || now.getTime() - config.plannedAt.getTime() > 3600_000);
 
@@ -122,7 +124,7 @@ export async function planOffline(tx: Prisma.TransactionClient, serial: string, 
 
   if (desired.length) {
 
-    frames.push(timezoneCommand(config.timezone, until, config.utcOffsetMinutes));
+    frames.push(timezoneCommand(config.timezone, until, config.utcOffsetMinutes, antiPassbackEnabled));
 
     for (const slot of desired) frames.push(cardCommand(slot.index, slot.card, config.timezone, now, until, config.utcOffsetMinutes));
 

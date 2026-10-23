@@ -33,6 +33,21 @@ class CapacityTests(unittest.TestCase):
   self.manifest['companies']=[{'id':'c','enabled':True,'ownerParkingAllocation':1,'employeeParkingAllocation':1}]
   for card in self.manifest['cards'][:2]:card.update(pool='company',companyId='c')
   self.ledger.snapshot(self.manifest);self.assertTrue(self.entry(1,2000)['allowed']);self.assertFalse(self.entry(2,4000)['allowed'])
+ def test_disabled_limits_allow_fifth_but_keep_card_validation(self):
+  self.manifest['parkingLimitsEnabled']=False
+  self.manifest['cards'].append({**self.manifest['cards'][0],'cardNo':'6','allowed':False})
+  self.ledger.snapshot(self.manifest)
+  for i in range(1,6):self.assertTrue(self.entry(i,i*2000)['allowed'])
+  self.assertFalse(self.entry(6,12000)['allowed'])
+  self.assertFalse(self.entry(99,14000)['allowed'])
+ def test_disabled_apb_allows_repeat_without_counting_an_extra_space(self):
+  self.manifest['antiPassbackEnabled']=False;self.ledger.snapshot(self.manifest)
+  for i in range(1,5):self.assertTrue(self.entry(i,i*2000)['allowed'])
+  self.assertTrue(self.entry(1,12000)['allowed'])
+  self.assertFalse(self.entry(5,14000)['allowed'])
+  self.assertTrue(self.ledger.scan('test','1','1',self.now+16000)['allowed'])
+  self.assertTrue(self.ledger.scan('test','1','1',self.now+18000)['allowed'])
+  self.assertTrue(self.entry(5,20000)['allowed'])
 if __name__=='__main__':unittest.main()
 
 class GatewayReplyTests(unittest.TestCase):

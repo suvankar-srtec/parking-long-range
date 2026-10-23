@@ -25,6 +25,7 @@ export async function GET(request: Request) {
     return [r.deviceNumber.endsWith("-A") ? "0" : "1", r.mode === "REGISTER" ? "REGISTER" : !gate ? "DISABLED" : gateReaderDirection(gate, r.id)];
   }));
   return NextResponse.json({ ok: true, serial, buildingId: building.id, directions, cards,
+    parkingLimitsEnabled: building.parkingLimitsEnabled, antiPassbackEnabled: building.antiPassbackEnabled,
     limits: { total: building.totalParking, owner: building.ownerParking, company: building.companyParking },
     visitorInside: visitors.length, companyVisitorInside: visitors.filter(v => v.companyId).length,
     companies, leaseUntil: new Date(Date.now() + 86400000).toISOString() }, { headers: { "Cache-Control": "no-store" } });

@@ -105,7 +105,7 @@ export async function processReaderScan(input: ParsedRfidReaderMessage, transpor
 
     const buildingStatus = await tx.building.findUniqueOrThrow({
       where: { id: reader.buildingId },
-      select: { enabled: true },
+      select: { enabled: true, parkingLimitsEnabled: true, antiPassbackEnabled: true },
     });
     if (reader.mode === "REGISTER" && !buildingStatus.enabled) {
       return record(READER_NO_SUCCESS_CODE, "Building is disabled. Card registration is unavailable.");
@@ -221,10 +221,10 @@ export async function processReaderScan(input: ParsedRfidReaderMessage, transpor
       if (effectiveMode === "ENTRY_EXIT") {
         enter = !visitor.isInside;
       } else if (effectiveMode === "ENTRY") {
-        if (visitor.isInside) return record(READER_NO_SUCCESS_CODE, "Duplicate entry: visitor is already inside. Exit before another Entry.", "DUPLICATE", undefined, visitor.companyId || undefined, undefined, visitor.id);
+        if (visitor.isInside && buildingStatus.antiPassbackEnabled !== false) return record(READER_NO_SUCCESS_CODE, "Duplicate entry: visitor is already inside. Exit before another Entry.", "DUPLICATE", undefined, visitor.companyId || undefined, undefined, visitor.id);
         enter = true;
       } else {
-        if (!visitor.isInside) return record(READER_NO_SUCCESS_CODE, "Visitor is already outside.", "IGNORED", undefined, visitor.companyId || undefined, undefined, visitor.id);
+        if (!visitor.isInside && buildingStatus.antiPassbackEnabled !== false) return record(READER_NO_SUCCESS_CODE, "Visitor is already outside.", "IGNORED", undefined, visitor.companyId || undefined, undefined, visitor.id);
         enter = false;
       }
 
@@ -245,7 +245,7 @@ export async function processReaderScan(input: ParsedRfidReaderMessage, transpor
         return record(READER_NO_SUCCESS_CODE, "Building is disabled. Entry is not allowed.", "DENIED", undefined, visitor.companyId || undefined, undefined, visitor.id);
       }
 
-      if (enter) {
+      if (enter && !visitor.isInside && buildingStatus.parkingLimitsEnabled !== false) {
         const [companyVehicleInside, companyVisitorInside, ownerInside, adminVisitorInside, building] = await Promise.all([
           tx.vehicle.count({ where: { isInside: true, company: { buildingId: reader.buildingId } } }),
           tx.visitor.count({ where: { buildingId: reader.buildingId, companyId: { not: null }, isInside: true } }),
@@ -367,10 +367,10 @@ export async function processReaderScan(input: ParsedRfidReaderMessage, transpor
     if (effectiveMode === "ENTRY_EXIT") {
       enter = !currentInside;
     } else if (effectiveMode === "ENTRY") {
-      if (currentInside) return record(READER_NO_SUCCESS_CODE, "Duplicate entry: vehicle is already inside. Exit before another Entry.", "DUPLICATE", vehicle?.id, vehicle?.companyId, ownerVehicle?.id);
+      if (currentInside && buildingStatus.antiPassbackEnabled !== false) return record(READER_NO_SUCCESS_CODE, "Duplicate entry: vehicle is already inside. Exit before another Entry.", "DUPLICATE", vehicle?.id, vehicle?.companyId, ownerVehicle?.id);
       enter = true;
     } else {
-      if (!currentInside) return record(READER_NO_SUCCESS_CODE, "Vehicle is already outside.", "IGNORED", vehicle?.id, vehicle?.companyId, ownerVehicle?.id);
+      if (!currentInside && buildingStatus.antiPassbackEnabled !== false) return record(READER_NO_SUCCESS_CODE, "Vehicle is already outside.", "IGNORED", vehicle?.id, vehicle?.companyId, ownerVehicle?.id);
       enter = false;
     }
 
@@ -378,7 +378,7 @@ export async function processReaderScan(input: ParsedRfidReaderMessage, transpor
       return record(READER_NO_SUCCESS_CODE, "Building is disabled. Entry is not allowed.", "DENIED", vehicle?.id, vehicle?.companyId, ownerVehicle?.id);
     }
 
-    if (enter) {
+    if (enter && !currentInside && buildingStatus.parkingLimitsEnabled !== false) {
       const [companyVehicleInside, companyVisitorInside, ownerInside, adminVisitorInside, building] = await Promise.all([
         tx.vehicle.count({ where: { isInside: true, company: { buildingId: reader.buildingId } } }),
         tx.visitor.count({ where: { buildingId: reader.buildingId, companyId: { not: null }, isInside: true } }),
