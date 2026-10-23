@@ -1,3 +1,4 @@
+import { scanEventType } from "@/lib/rfid-display";
 import { dailyMovements } from "@/lib/rfid-movement-totals";
 import { hasPermission as canUsePermission } from "@/lib/permissions";
 import { NextResponse } from "next/server";
@@ -202,6 +203,7 @@ export async function GET(request: Request) {
 
     return {
       ...event,
+      eventType: scanEventType(event),
       cardNo: visitor ? "VISITOR QR" : event.cardNo,
       vehicle,
       personType,

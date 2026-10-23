@@ -179,3 +179,5 @@
  .employeeParkingTotals span{font-size:11px}.employeeParkingTotals strong{font-size:23px;margin-top:3px}
  .companyParkingCard{padding:11px 12px;border-radius:10px}.companyParkingCard h3{font-size:15px;margin-bottom:9px}
 }
+
+.onlineEvent{color:#15803d;font-weight:700;white-space:nowrap}.offlineEvent{color:#a16207;font-weight:700;white-space:nowrap}
