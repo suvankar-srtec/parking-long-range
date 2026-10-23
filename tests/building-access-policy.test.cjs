@@ -38,3 +38,5 @@ test('Policy API rejects missing, string and unexpected fields without writing',
   for(const body of [{},{parkingLimitsEnabled:'false',antiPassbackEnabled:true},{parkingLimitsEnabled:false,antiPassbackEnabled:false,enabled:false},[]]) assert.equal((await f.save(body)).status,400);
   assert.equal(f.state.updates.length,0);
 });
+
+test('Each submenu may save one setting without overwriting the other',async()=>{ for(const field of ['parkingLimitsEnabled','antiPassbackEnabled']) {const f=fixture({role:'BUILDING_ADMIN',buildingId:'b'});assert.equal((await f.save({[field]:false})).status,200);assert.equal(f.state.updates[0][field],false);assert.equal(f.state.updates[0][field==='parkingLimitsEnabled'?'antiPassbackEnabled':'parkingLimitsEnabled'],undefined);} });

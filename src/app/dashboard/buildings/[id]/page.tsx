@@ -7,7 +7,6 @@ import { isPrimarySuperAdmin as hasPrimaryAccess } from "@/lib/super-admin-scope
 import Sidebar from "@/components/Sidebar";
 import CompanyList from "@/components/CompanyList";
 import BuildingParkingEditor from "@/components/BuildingParkingEditor";
-import BuildingAccessPolicyEditor from "@/components/BuildingAccessPolicyEditor";
 import BuildingAdminPanel from "@/components/BuildingAdminPanel";
 import SupervisorManager from "@/components/SupervisorManager";
 import BuildingCredentialsEditor from "@/components/BuildingCredentialsEditor";
@@ -73,8 +72,7 @@ export default async function BuildingPage({ params }: { params: Promise<{ id: s
                 <small>Set Owner, Visitor and Company parking plus the maximum number of gates.</small>
               </div>
             </div>
-            <BuildingAccessPolicyEditor buildingId={building.id} parkingLimitsEnabled={building.parkingLimitsEnabled} antiPassbackEnabled={building.antiPassbackEnabled} />
-        <BuildingParkingEditor buildingId={building.id} initialValues={{ totalParking: building.totalParking, ownerParking: building.ownerParking, visitorParking: building.visitorParking, companyParking: building.companyParking, maximumGate: building.maximumGate }} />
+            <BuildingParkingEditor buildingId={building.id} initialValues={{ totalParking: building.totalParking, ownerParking: building.ownerParking, visitorParking: building.visitorParking, companyParking: building.companyParking, maximumGate: building.maximumGate }} />
           </section>
         </div>
       </section>

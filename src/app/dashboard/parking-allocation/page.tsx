@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import SignOutButton from "@/components/SignOutButton";
 import BuildingParkingEditor from "@/components/BuildingParkingEditor";
-import BuildingAccessPolicyEditor from "@/components/BuildingAccessPolicyEditor";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/session";
 import { effectivePermissions, hasPermission } from "@/lib/permissions";
@@ -56,7 +55,6 @@ export default async function AdminParkingAllocationPage() {
           </div>
         </div>
         <div className="portfolio-divider" />
-        <BuildingAccessPolicyEditor buildingId={building.id} parkingLimitsEnabled={building.parkingLimitsEnabled} antiPassbackEnabled={building.antiPassbackEnabled} />
         <BuildingParkingEditor
           buildingId={building.id}
           initialValues={{

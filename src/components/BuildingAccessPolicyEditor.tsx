@@ -7,7 +7,8 @@ import { ActionButton } from "./LoadingIndicator";
 
 type Policy = { parkingLimitsEnabled: boolean; antiPassbackEnabled: boolean };
 
-export default function BuildingAccessPolicyEditor({ buildingId, ...initial }: Policy & { buildingId: string }) {
+export default function BuildingAccessPolicyEditor({ buildingId, field, parkingLimitsEnabled, antiPassbackEnabled }: Policy & { buildingId: string; field: keyof Policy }) {
+  const initial = { parkingLimitsEnabled, antiPassbackEnabled };
   const [saved, setSaved] = useState<Policy>(initial);
   const [policy, setPolicy] = useState<Policy>(initial);
   const { notify, refresh } = useFeedback();
@@ -16,18 +17,17 @@ export default function BuildingAccessPolicyEditor({ buildingId, ...initial }: P
   function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     void execute(async () => {
-      const data = await requestJson<{ ok: boolean; policy: Policy; message: string }>(`/api/buildings/${buildingId}/access-policy`, "PATCH", policy);
+      const data = await requestJson<{ ok: boolean; policy: Policy; message: string }>(`/api/buildings/${buildingId}/access-policy`, "PATCH", { [field]: policy[field] });
       setSaved(data.policy); setPolicy(data.policy); notify(data.message); refresh();
     });
   }
   return <form className="building-access-policy" onSubmit={save} aria-label="Building access settings" aria-busy={pending}>
     <fieldset disabled={pending}>
-      <legend>Access settings</legend>
-      <label><input type="checkbox" checked={policy.parkingLimitsEnabled} onChange={event => setPolicy(current => ({ ...current, parkingLimitsEnabled: event.target.checked }))} /> Parking limits enabled</label>
-      <label><input type="checkbox" checked={policy.antiPassbackEnabled} onChange={event => setPolicy(current => ({ ...current, antiPassbackEnabled: event.target.checked }))} /> Anti-passback enabled</label>
+      <legend>{field === "parkingLimitsEnabled" ? "Parking limits" : "Anti-passback"}</legend>
+      {field === "parkingLimitsEnabled" ? <label><input type="checkbox" checked={policy.parkingLimitsEnabled} onChange={event => setPolicy(current => ({ ...current, parkingLimitsEnabled: event.target.checked }))} /> Parking limits enabled</label> : null}
+      {field === "antiPassbackEnabled" ? <label><input type="checkbox" checked={policy.antiPassbackEnabled} onChange={event => setPolicy(current => ({ ...current, antiPassbackEnabled: event.target.checked }))} /> Anti-passback enabled</label> : null}
     </fieldset>
-    <p>Limits apply to building, owner, company and visitor capacity. Anti-passback prevents repeated entry or exit without the opposite scan. Occupancy remains tracked when disabled.</p>
-    <p>Limits require gateway or website authorization. With controller LAN disconnected, stored-card fallback cannot guarantee capacity limits. Controller anti-passback updates when it reconnects.</p>
+    {field === "parkingLimitsEnabled" ? <><p>Enable capacity checks for building, owner, company and visitor parking. Disabling limits keeps occupancy tracking active.</p><p>Capacity checks require gateway or website authorization. Controller fallback with LAN disconnected cannot guarantee parking limits.</p></> : <><p>Prevent repeated entry or exit without the opposite scan. Disabling anti-passback keeps occupancy tracking and duplicate-scan protection active.</p><p>Controller anti-passback updates when it reconnects.</p></>}
     <ActionButton type="submit" className="primary-button" pending={pending} pendingText="Saving settings…" disabled={!changed}>Save access settings</ActionButton>
     <style jsx>{`
       .building-access-policy{margin-bottom:16px;padding:12px;border:1px solid #c6d8ed;border-radius:6px}

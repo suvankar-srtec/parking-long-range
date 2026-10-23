@@ -17,9 +17,9 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     }
     const body = await request.json().catch(() => null);
     const keys = ["parkingLimitsEnabled", "antiPassbackEnabled"];
-    if (!body || typeof body !== "object" || Array.isArray(body) || Object.keys(body).length !== 2 ||
-        Object.keys(body).some(key => !keys.includes(key)) || keys.some(key => typeof body[key] !== "boolean")) {
-      throw new ParkingError("Send boolean parkingLimitsEnabled and antiPassbackEnabled settings.");
+    if (!body || typeof body !== "object" || Array.isArray(body) || Object.keys(body).length < 1 ||
+        Object.keys(body).some(key => !keys.includes(key)) || Object.keys(body).some(key => typeof body[key] !== "boolean")) {
+      throw new ParkingError("Send boolean parkingLimitsEnabled or antiPassbackEnabled settings.");
     }
     const policy = await prisma.$transaction(async tx => {
       await lockBuildingParking(tx, id);

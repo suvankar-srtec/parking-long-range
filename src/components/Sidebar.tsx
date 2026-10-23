@@ -12,6 +12,7 @@ import { dashboardLabel, roleLabel } from "@/lib/roles";
 import { defaultPermissionsForRole } from "@/lib/permissions";
 
 type IconName =
+  | "settings"
   | "bell"
   | "dashboard"
   | "building"
@@ -38,6 +39,7 @@ function NavIcon({ name }: { name: IconName }) {
     "aria-hidden": true,
   };
 
+  if (name === "settings") return <svg {...common}><path d="M9 3h6l1 3 3 1 2 5-2 5-3 1-1 3H9l-1-3-3-1-2-5 2-5 3-1z"/><circle cx="12" cy="12" r="3"/></svg>;
   if (name === "bell") return <svg {...common}><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg>;
   if (name === "dashboard") return <svg {...common}><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>;
   if (name === "building") return <svg {...common}><path d="M4 21V5.5L12 3v18"/><path d="M12 8h8v13"/><path d="M7 8h2M7 12h2M7 16h2M15 11h2M15 15h2M3 21h18"/></svg>;
@@ -96,21 +98,24 @@ export default function Sidebar({
   const superAdminsActive = pathname === "/super-admins" || pathname.startsWith("/super-admins/");
   const dashboardGroupActive = dashboardPageActive || superAdminsActive;
   const accessGroupActive = pathname === "/access-control" || pathname.startsWith("/access-control/");
+  const settingsGroupActive = pathname === "/settings" || pathname.startsWith("/settings/");
   const visitorFormActive = pathname === "/visitor-form" || pathname.startsWith("/visitor-form/");
   const reportsActive = pathname === "/reports" || pathname.startsWith("/reports/");
 
   const [expanded, setExpanded] = useState({
     dashboard: dashboardGroupActive,
     access: accessGroupActive,
+    settings: settingsGroupActive,
   });
 
   useEffect(() => {
     setExpanded((current) => ({
       dashboard: dashboardGroupActive ? true : current.dashboard,
       access: accessGroupActive ? true : current.access,
+      settings: settingsGroupActive ? true : current.settings,
     }));
     setMobileOpen(false);
-  }, [pathname, dashboardGroupActive, accessGroupActive]);
+  }, [pathname, dashboardGroupActive, accessGroupActive, settingsGroupActive]);
 
   useEffect(() => {
     if (!mobileOpen) return;
@@ -272,10 +277,6 @@ export default function Sidebar({
         </div>
       </div>
 
-      {(isSuperAdmin || role === "BUILDING_ADMIN" && assigned.has("building.approveManualExit")) && <Link href="/notifications" className={`sidebar-nav-parent${pathname === "/notifications" ? " is-active" : ""}`}>
-        <NavRow icon="bell" label="Notifications" end={<NotificationBadge />} />
-      </Link>}
-
       {showAccess ? <div className="sidebar-nav-group">
         <button
           type="button"
@@ -326,6 +327,20 @@ export default function Sidebar({
           >
             <NavRow icon="card" label="Card Block" />
           </Link> : null}
+        </div>
+      </div> : null}
+
+      {(isSuperAdmin || role === "BUILDING_ADMIN" && assigned.has("building.approveManualExit")) && <Link href="/notifications" className={`sidebar-nav-parent${pathname === "/notifications" ? " is-active" : ""}`}>
+        <NavRow icon="bell" label="Notifications" end={<NotificationBadge />} />
+      </Link>}
+
+      {(isSuperAdmin || role === "BUILDING_ADMIN") ? <div className="sidebar-nav-group">
+        <button type="button" className={`sidebar-nav-parent${settingsGroupActive ? " is-active" : ""}`} aria-expanded={expanded.settings} aria-controls="settings-menu" onClick={() => toggle("settings")}>
+          <NavRow icon="settings" label="Settings" end={<span className={`sidebar-chevron${expanded.settings ? " is-open" : ""}`} aria-hidden="true" />} />
+        </button>
+        <div id="settings-menu" className={`sidebar-submenu${expanded.settings ? " is-open" : ""}`} hidden={!expanded.settings}>
+          <Link href="/settings/limits" className={`sidebar-submenu-link${pathname === "/settings/limits" ? " is-active" : ""}`} aria-current={pathname === "/settings/limits" ? "page" : undefined}><NavRow icon="parking" label="Limit enable/disable" /></Link>
+          <Link href="/settings/anti-passback" className={`sidebar-submenu-link${pathname === "/settings/anti-passback" ? " is-active" : ""}`} aria-current={pathname === "/settings/anti-passback" ? "page" : undefined}><NavRow icon="shield" label="Anti-passback" /></Link>
         </div>
       </div> : null}
 
