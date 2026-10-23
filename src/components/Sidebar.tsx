@@ -330,10 +330,6 @@ export default function Sidebar({
         </div>
       </div> : null}
 
-      {(isSuperAdmin || role === "BUILDING_ADMIN" && assigned.has("building.approveManualExit")) && <Link href="/notifications" className={`sidebar-nav-parent${pathname === "/notifications" ? " is-active" : ""}`}>
-        <NavRow icon="bell" label="Notifications" end={<NotificationBadge />} />
-      </Link>}
-
       {(isSuperAdmin || role === "BUILDING_ADMIN") ? <div className="sidebar-nav-group">
         <button type="button" className={`sidebar-nav-parent${settingsGroupActive ? " is-active" : ""}`} aria-expanded={expanded.settings} aria-controls="settings-menu" onClick={() => toggle("settings")}>
           <NavRow icon="settings" label="Settings" end={<span className={`sidebar-chevron${expanded.settings ? " is-open" : ""}`} aria-hidden="true" />} />
@@ -343,6 +339,10 @@ export default function Sidebar({
           <Link href="/settings/anti-passback" className={`sidebar-submenu-link${pathname === "/settings/anti-passback" ? " is-active" : ""}`} aria-current={pathname === "/settings/anti-passback" ? "page" : undefined}><NavRow icon="shield" label="Anti-passback" /></Link>
         </div>
       </div> : null}
+
+      {(isSuperAdmin || role === "BUILDING_ADMIN" && assigned.has("building.approveManualExit")) && <Link href="/notifications" className={`sidebar-nav-parent${pathname === "/notifications" ? " is-active" : ""}`}>
+        <NavRow icon="bell" label="Notifications" end={<NotificationBadge />} />
+      </Link>}
 
       {showVisitorForm ? <Link
         className={`sidebar-nav-link${visitorFormActive ? " is-active" : ""}`}
