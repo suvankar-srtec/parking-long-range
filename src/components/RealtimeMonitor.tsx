@@ -27,6 +27,7 @@ type Headcount = {
   ok: true;
   buildingName: string;
   companyName: string | null;
+  openingOnSite: number | null;
   totalIn: number;
   totalOut: number;
   totalOnSite: number;
@@ -178,9 +179,10 @@ export default function RealtimeMonitor({
       {error ? <div className={`parking-feedback parking-feedback-error ${styles.error}`}>{error}</div> : null}
       {loading && !data ? <p><Spinner /> Loading realtime monitor…</p> : <div className={styles.totals} style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}>
         <article className={`${styles.totalCard} ${styles.onsite}`}><span>Total On Site</span><strong>{data?.totalOnSite ?? 0}</strong></article>
-        <article className={`${styles.totalCard} ${styles.in}`}><span>Total IN</span><strong>{data?.totalIn ?? 0}</strong></article>
-        <article className={`${styles.totalCard} ${styles.out}`}><span>Total OUT</span><strong>{data?.totalOut ?? 0}</strong></article>
+        <article className={`${styles.totalCard} ${styles.in}`}><span>Total IN (today)</span><strong>{data?.totalIn ?? 0}</strong></article>
+        <article className={`${styles.totalCard} ${styles.out}`}><span>Total OUT (today)</span><strong>{data?.totalOut ?? 0}</strong></article>
       </div>}
+      {data?.openingOnSite != null ? <p style={{ margin: "6px 0 0", fontSize: 12, color: "#52667d" }}>Today's IN/OUT count occupancy changes; repeated scans are excluded. On site at start of day: {data.openingOnSite}.</p> : null}
     </section>
 
     <section className={`portfolio-card ${styles.scanTableCard}`}>

@@ -36,6 +36,7 @@ type ActiveCard = {
 type Headcount = {
   ok: true;
   buildingName: string;
+  openingOnSite: number | null;
   totalIn: number | null;
   totalOut: number | null;
   totalOnSite: number | null;
@@ -219,9 +220,10 @@ export default function SupervisorHeadcount({
       {error ? <div className={`parking-feedback parking-feedback-error ${styles.error}`}>{error}</div> : null}
       <div className={styles.totals} style={{ gridTemplateColumns: `repeat(${metricCount}, minmax(0, 1fr))` }}>
         {showTotalOnSite ? <button type="button" className={`${styles.totalCard} ${styles.onsite} ${styles.clickableTotal}`} onClick={() => setShowActiveCards(true)}><span>Total On Site</span><strong>{data?.totalOnSite ?? 0}</strong><small>Click to view active cards</small></button> : null}
-        {showTotalIn ? <article className={`${styles.totalCard} ${styles.in}`}><span>Total IN</span><strong>{data?.totalIn ?? 0}</strong></article> : null}
-        {showTotalOut ? <article className={`${styles.totalCard} ${styles.out}`}><span>Total OUT</span><strong>{data?.totalOut ?? 0}</strong></article> : null}
+        {showTotalIn ? <article className={`${styles.totalCard} ${styles.in}`}><span>Total IN (today)</span><strong>{data?.totalIn ?? 0}</strong></article> : null}
+        {showTotalOut ? <article className={`${styles.totalCard} ${styles.out}`}><span>Total OUT (today)</span><strong>{data?.totalOut ?? 0}</strong></article> : null}
       </div>
+      {data?.openingOnSite != null ? <p style={{ margin: "6px 0 0", fontSize: 12, color: "#52667d" }}>Today's IN/OUT count occupancy changes; repeated scans are excluded. On site at start of day: {data.openingOnSite}.</p> : null}
     </section> : null}
 
     {showActiveCards ? <div className={styles.activeCardsBackdrop} onMouseDown={(event) => { if (event.target === event.currentTarget) setShowActiveCards(false); }}>

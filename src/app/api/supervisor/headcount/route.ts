@@ -1,3 +1,4 @@
+import { dailyMovements } from "@/lib/rfid-movement-totals";
 import { hasPermission as canUsePermission } from "@/lib/permissions";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
@@ -60,11 +61,10 @@ export async function GET(request: Request) {
 
   const companyFilter = companyId ? { companyId } : {};
   const vehicleCompanyFilter = companyId ? { id: companyId } : { buildingId };
-  const [building, company, totalIn, totalOut, insideVehicles, ownerVehiclesInside, insideVisitors, recentEvents, parkingCompanies] = await Promise.all([
+  const [building, company, movements, insideVehicles, ownerVehiclesInside, insideVisitors, recentEvents, parkingCompanies] = await Promise.all([
     prisma.building.findUnique({ where: { id: buildingId }, select: { name: true } }),
     companyId ? prisma.company.findUnique({ where: { id: companyId }, select: { name: true } }) : Promise.resolve(null),
-    prisma.rfidEvent.count({ where: { buildingId, ...companyFilter, action: "ENTRY", createdAt: { gte: start, lt: end } } }),
-    prisma.rfidEvent.count({ where: { buildingId, ...companyFilter, action: "EXIT", createdAt: { gte: start, lt: end } } }),
+    dailyMovements(buildingId, companyId, start, end),
     prisma.vehicle.findMany({
       where: { isInside: true, company: vehicleCompanyFilter },
       select: {
@@ -213,8 +213,9 @@ export async function GET(request: Request) {
     ok: true,
     buildingName: building?.name || "Assigned building",
     companyName: company?.name || null,
-    totalIn: allowTotalIn ? totalIn : null,
-    totalOut: allowTotalOut ? totalOut : null,
+    openingOnSite: allowTotalOnSite ? movements.openingOnSite : null,
+    totalIn: allowTotalIn ? movements.totalIn : null,
+    totalOut: allowTotalOut ? movements.totalOut : null,
     totalOnSite: allowTotalOnSite ? insideVehicles.length + ownerVehiclesInside.length + insideVisitors.length : null,
     canManualExit: user.role === "SUPER_ADMIN" || user.role === "BUILDING_ADMIN" && hasPermission(user, "building.approveManualExit") || user.role === "EMPLOYEE" && hasPermission(user, "supervisor.liveDashboard") && hasPermission(user, "supervisor.requestManualExit"),
     activeCards: allowTotalOnSite ? activeCards : [],
