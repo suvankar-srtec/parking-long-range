@@ -13,6 +13,7 @@ import EmployeeList from "@/components/EmployeeList";
 import EmployeeCreateModal from "@/components/EmployeeCreateModal";
 import SupervisorHeadcount from "@/components/SupervisorHeadcount";
 import CompanyCredentialsEditor from "@/components/CompanyCredentialsEditor";
+import CompanyParkingSummary from "@/components/CompanyParkingSummary";
 import OwnerParkingVehicleModal from "@/components/OwnerParkingVehicleModal";
 import OwnerVehicleDetailsList from "@/components/OwnerVehicleDetailsList";
 
@@ -173,7 +174,7 @@ export default async function DashboardPage() {
 
     return <main className="dashboard-page"><Sidebar role={user.role} permissions={permissions} /><section className="dashboard-main">
       <header className="topbar"><div><div className="section-kicker">{roleLabel(user.role).toUpperCase()}</div><h1>{company.name}</h1></div><div className="topbar-right"><div className="summary-card"><span>Building</span><strong>{company.building.name}</strong></div><SignOutButton /></div></header>
-      {canViewUsage ? <section className="portfolio-card building-management"><div className="portfolio-header"><div><div className="section-kicker">COMPANY PARKING</div><h2>Parking allocation</h2><p>Company parking usage available to this account.</p></div></div><div className="portfolio-divider" /><CompanyCredentialsEditor userId={user.userId} companyName={company.name} initialPassword={user.password} /><div className="account-parking-grid account-company-parking-grid"><div className="large-stat"><span>Company limit</span><strong>{company.parkingAllocation}</strong></div><div className="large-stat"><span>Visitor parking</span><strong>{company.visitorParkingAllocation}</strong></div><div className="large-stat"><span>Total employees</span><strong>{peopleCount}</strong></div><div className="large-stat"><span>Registered vehicles</span><strong>{used}</strong></div><div className="large-stat"><span>Unassigned</span><strong>{available}</strong></div></div></section> : null}
+      {canViewUsage ? <section className="portfolio-card building-management"><div className="portfolio-header"><div><div className="section-kicker">COMPANY PARKING</div><h2>Parking allocation</h2><p>Company parking usage available to this account.</p></div></div><div className="portfolio-divider" /><CompanyCredentialsEditor userId={user.userId} companyName={company.name} initialPassword={user.password} /><CompanyParkingSummary limit={company.parkingAllocation} visitors={company.visitorParkingAllocation} employees={peopleCount} vehicles={used} available={available} /></section> : null}
       {(canManagePeople || canManageVehicles) ? <section className="portfolio-card building-management"><div className="employee-section-header"><div><div className="section-kicker">EMPLOYEES</div><h2>Employees & Company Owners</h2></div>{canManagePeople ? <EmployeeCreateModal companyId={company.id} departments={company.departments} maximumDepartments={company.maximumDepartments} canManageVehicles={canManageVehicles} canRegisterRfid={canRegisterRfid} /> : null}</div><div className="portfolio-divider" /><EmployeeList companyId={company.id} employees={company.employees} departments={company.departments} /></section> : null}
     </section></main>;
   }

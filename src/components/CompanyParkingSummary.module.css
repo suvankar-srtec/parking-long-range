@@ -1,0 +1,26 @@
+.summary{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin:18px 0 0;padding:0}
+.metric{min-width:0;display:flex;flex-direction:column;justify-content:space-between;gap:14px;padding:16px;border:1px solid #e2e9f1;border-radius:14px;background:#fff;box-shadow:0 3px 12px #17314f06}
+.heading{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.heading dt{margin:0;color:#61738b;font-size:12px;font-weight:600;line-height:1.4}
+.icon{display:grid;place-items:center;flex-shrink:0;width:32px;height:32px;border-radius:10px;color:#4174af;background:#f0f5fc}
+.metric dd{margin:0;color:#1d3553;font-size:30px;font-weight:750;line-height:1;letter-spacing:-1px;font-variant-numeric:tabular-nums}
+.capacity{border-color:#1e65b6;background:linear-gradient(135deg,#12519a,#2474ca);box-shadow:0 5px 16px #1769c21a}
+.capacity .heading dt{color:#e7f1ff}.capacity dd{color:#fff}.capacity .icon{background:#ffffff24;color:#fff}
+.visitor .icon{background:#fff5e8;color:#b77a22}
+.employee .icon{background:#f3efff;color:#7856b3}
+.vehicle .icon{background:#eef4fa;color:#587792}
+.available{background:#f5fbf8;border-color:#d8ebe2}.available .icon{background:#e2f3ea;color:#278260}.available dd{color:#21805b}
+@media(max-width:1100px){
+ .summary{grid-template-columns:repeat(4,minmax(0,1fr))}
+ .capacity{grid-column:1/-1;flex-direction:row;align-items:center;padding:14px 18px}
+ .capacity .heading{flex-direction:row-reverse;justify-content:flex-end;gap:12px}
+ .capacity .heading dt{font-size:13px}
+}
+@media(max-width:640px){
+ .summary{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:14px}
+ .metric{padding:13px;gap:12px;border-radius:12px}
+ .metric dd{font-size:28px}
+ .heading dt{font-size:11px}
+ .icon{width:29px;height:29px;border-radius:9px}
+ .capacity{padding:14px 16px}
+}
