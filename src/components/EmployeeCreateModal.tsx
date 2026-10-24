@@ -285,7 +285,7 @@ export default function EmployeeCreateModal({
                 </div>
                 {generationError ? <small className="employee-id-error">{generationError}</small> : null}
               </div>
-              <label>Person Type<select name="category" defaultValue={existingEmployee?.category || "EMPLOYEE"} disabled={Boolean(existingEmployee)} required><option value="EMPLOYEE">Employee</option><option value="OWNER">Company Owner</option></select></label>
+              <label>Type<select name="category" defaultValue={existingEmployee?.category || "EMPLOYEE"} disabled={Boolean(existingEmployee)} required><option value="EMPLOYEE">Employee</option><option value="OWNER">Company Owner</option></select></label>
             </div>
           </fieldset>
 

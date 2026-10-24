@@ -45,7 +45,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     const user = await canManageCompany(companyId);
     if (!user) return NextResponse.json({ ok: false, message: "You do not have permission to add departments for this company." }, { status: 403 });
     if ((user.role === "COMPANY_ADMIN" || user.role === "BUILDING_OWNER") && !hasPermission(user, "company.managePeople")) {
-      return NextResponse.json({ ok: false, message: "People management is not assigned to this Company/User account." }, { status: 403 });
+      return NextResponse.json({ ok: false, message: "Employee management is not assigned to this Company/User account." }, { status: 403 });
     }
 
     const body = await request.json().catch(() => null);

@@ -149,13 +149,13 @@ export default function CompanyList({
               {showPassword ? <CompanyPasswordField companyId={company.id} password={password} /> : null}
             </section>
 
-            <section className={styles.infoSection} aria-label={`${company.name} people summary`}>
+            <section className={styles.infoSection} aria-label={`${company.name} employee summary`}>
               <div className={styles.sectionHeading}>
-                <span>PEOPLE</span>
+                <span>EMPLOYEES</span>
                 <small>Registered users</small>
               </div>
               <dl className={styles.statList}>
-                <div><dt>Total people</dt><dd>{people.length}</dd></div>
+                <div><dt>Total employees</dt><dd>{people.length}</dd></div>
                 <div><dt>Employees</dt><dd>{employeeCount}</dd></div>
                 <div><dt>Company owners</dt><dd>{ownerCount}</dd></div>
               </dl>

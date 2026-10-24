@@ -19,7 +19,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       select: { id: true, buildingId: true, enabled: true },
     });
     if (!companyInScope || !canCreateCompanyPeople(owner, companyInScope)) {
-      return NextResponse.json({ ok: false, message: "You do not have permission to add people to this company." }, { status: 403 });
+      return NextResponse.json({ ok: false, message: "You do not have permission to add employees to this company." }, { status: 403 });
     }
     if (!companyInScope.enabled) {
       return NextResponse.json({ ok: false, message: "Enable this company before creating employees." }, { status: 409 });

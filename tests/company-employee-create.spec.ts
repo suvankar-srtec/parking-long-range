@@ -38,7 +38,7 @@ test("Company people permission enables scoped employee creation and ID generati
       const dialog=page.getByRole("dialog",{name:"Add Employee / Company Owner"});
       await expect(dialog.getByLabel("Parking Limit",{exact:true})).toHaveCount(0);
       await dialog.getByLabel("Full Name",{exact:true}).fill(tag+user.role);
-      if(user.role==="BUILDING_OWNER") await dialog.getByLabel("Person Type").selectOption("OWNER");
+      if(user.role==="BUILDING_OWNER") await dialog.getByLabel("Type").selectOption("OWNER");
       await expect(dialog.getByLabel("User ID",{exact:true})).toHaveValue(/^EMP\d+$/);
       const created=page.waitForResponse(r=>r.url().endsWith(`/api/companies/${company.id}/employees`)&&r.request().method()==="POST");
       await dialog.getByRole("button",{name:"Add Employee",exact:true}).click();

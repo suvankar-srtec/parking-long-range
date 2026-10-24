@@ -95,7 +95,7 @@ export default function CompanyAdminSettingsModal({ companyId, companyName, park
 
           <div className="capacity-info">
             <strong>How this works</strong>
-            <span>Employees and company owners have no person limit. Parking allocation limits vehicle registration, not the number of people you can add.</span>
+            <span>Employees and company owners have no headcount limit. Parking allocation limits vehicle registration, not the number of employees you can add.</span>
           </div>
 
           <div className="modal-actions company-capacity-actions">

@@ -60,9 +60,9 @@ const BUILDING_ADMIN_PERMISSIONS: PermissionOption[] = [
 
 const COMPANY_PERMISSIONS: PermissionOption[] = [
   { key: "company.manageVisitors", label: "Manage visitors and QR passes", description: "Create and edit company visitors, download and send QR passes." },
-  { key: "company.managePeople", label: "Manage people and departments", description: "Add and edit Employees, Company Owners and company departments." },
+  { key: "company.managePeople", label: "Manage employees and departments", description: "Add and edit Employees, Company Owners and company departments." },
   { key: "company.allocateEmployeeParking", label: "Allocate employee parking", description: "Assign parking limits within the company allocation." },
-  { key: "company.manageVehicles", label: "Add / remove vehicles", description: "Register and remove vehicles for company people." },
+  { key: "company.manageVehicles", label: "Add / remove vehicles", description: "Register and remove vehicles for company employees." },
   { key: "company.registerRfid", label: "Register RFID cards", description: "Use a registration reader to assign RFID cards to vehicles." },
   { key: "company.viewUsage", label: "Company parking usage", description: "View company limits, assignments and registered vehicle usage." },
   { key: "company.viewReports", label: "Company reports", description: "View reports for this company only." },
