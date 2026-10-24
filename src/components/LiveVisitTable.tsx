@@ -6,9 +6,9 @@ import { manualExitResult, scanResultMessage } from "@/lib/rfid-display";
 import styles from "./SupervisorHeadcount.module.css";
 import visitStyles from "./LiveVisitTable.module.css";
 
-export const VISIT_COLUMNS = ["Entry time", "Exit time", "Device", "RFID / QR", "Vehicle", "Owner", "Employee", "Visitor", "Company", "Status", "Result", "Event Type"] as const;
+export const VISIT_COLUMNS = ["Entry time", "Exit time", "Device", "RFID / QR", "Vehicle", "Owner", "Employee", "Visitor", "Company", "Result", "Event Type"] as const;
 
-const COLUMN_WIDTHS = [10, 10, 10, 7, 6, 7, 7, 6, 10, 6, 10, 11];
+const COLUMN_WIDTHS = [10, 10, 10, 7, 6, 7, 7, 6, 10, 10, 11];
 
 function time(event: VisitScan | null) {
   if (!event) return "-";
@@ -27,7 +27,6 @@ export default function LiveVisitTable({ events, visibleColumns }: { events: Vis
     <tbody>{!visibleColumns.size || !rows.length ? <tr><td colSpan={Math.max(visibleColumns.size, 1)} className={styles.emptyTable}>{visibleColumns.size ? "No RFID activity has been recorded yet." : "Select a column to display the activity table."}</td></tr> : rows.map(row => {
       const event = row.latest;
       const allowed = event.code === "0000";
-      const status = row.exit ? "Exited" : row.entry ? "Inside" : event.action;
       const result = event.deviceNumber === "MANUAL" && event.action === "EXIT" ? manualExitResult(event.message) : allowed ? row.exit ? "Exit allowed" : row.entry ? "Entry allowed" : scanResultMessage(event.message) : scanResultMessage(event.message);
       const sources = row.entry && row.exit && row.entry.eventType !== row.exit.eventType ? `IN: ${row.entry.eventType || "—"} / OUT: ${row.exit.eventType || "—"}` : event.eventType || "—";
       const values = [
@@ -37,10 +36,10 @@ export default function LiveVisitTable({ events, visibleColumns }: { events: Vis
         event.personType === "OWNER" ? event.vehicle?.ownerName : "-",
         event.personType === "EMPLOYEE" ? event.vehicle?.ownerName : "-",
         event.personType === "VISITOR" ? event.vehicle?.ownerName : "-",
-        event.company?.name, status, result, sources,
+        event.company?.name, result, sources,
       ];
-      return <tr key={row.id}>{values.map((value, index) => <td key={VISIT_COLUMNS[index]} data-label={VISIT_COLUMNS[index]} hidden={!visibleColumns.has(index)} className={index === 10 ? allowed ? styles.successResult : styles.deniedResult : undefined}>
-        {index === 10 ? <span className={visitStyles.resultText}>{value || "—"}</span> : value || "—"}{index === 10 && !row.entry && !row.exit ? <small className={visitStyles.scanTime}>{time(event)}</small> : null}
+      return <tr key={row.id}>{values.map((value, index) => <td key={VISIT_COLUMNS[index]} data-label={VISIT_COLUMNS[index]} hidden={!visibleColumns.has(index)} className={index === 9 ? allowed ? styles.successResult : styles.deniedResult : undefined}>
+        {index === 9 ? <span className={visitStyles.resultText}>{value || "—"}</span> : value || "—"}{index === 9 && !row.entry && !row.exit ? <small className={visitStyles.scanTime}>{time(event)}</small> : null}
       </td>)}</tr>;
     })}</tbody>
   </table></div>;

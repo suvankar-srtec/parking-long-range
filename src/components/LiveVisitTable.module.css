@@ -5,7 +5,6 @@
 .table tr:hover td{background:#f8fbff}
 .table td:nth-child(6),.table td:nth-child(7),.table td:nth-child(8){font-weight:700;color:#1769c2}
 .table td:nth-child(9){white-space:nowrap;font-size:10px}
-.table td:nth-child(10){font-weight:700}
 .table td:first-child{color:#16824f;font-weight:600}
 .table td:nth-child(2){color:#1769c2;font-weight:600}
 .table td:last-child{color:#936520;font-weight:600}
