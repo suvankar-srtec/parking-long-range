@@ -59,6 +59,7 @@ export default function EmployeeCreateModal({
   const [addingDepartment, setAddingDepartment] = useState(false);
   const [departmentBusy, setDepartmentBusy] = useState(false);
   const [createdEmployee, setCreatedEmployee] = useState<CreatedEmployee | null>(null);
+  const [createdNotice, setCreatedNotice] = useState<CreatedEmployee | null>(null);
   const [vehicleCard, setVehicleCard] = useState<CapturedCard | null>(null);
   const requestVersion = useRef(0);
   const reservationRef = useRef("");
@@ -68,7 +69,21 @@ export default function EmployeeCreateModal({
     setDepartmentOptions(departments);
   }, [departments]);
 
+  useEffect(() => {
+    if (!createdNotice) return;
+    const timer = window.setTimeout(() => setCreatedNotice(null), 4000);
+    return () => window.clearTimeout(timer);
+  }, [createdNotice]);
+
+  useEffect(() => {
+    if (!open) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = previous; };
+  }, [open]);
+
   function show() {
+    setCreatedNotice(null);
     setName(existingEmployee?.name || "");
     setGeneratedUserId(existingEmployee?.userId || "");
     setReservationId("");
@@ -200,7 +215,8 @@ export default function EmployeeCreateModal({
         existingEmployee ? "PATCH" : "POST",
         existingEmployee ? { name: body.name, department } : body,
       );
-      notify(result.message || "Employee created successfully.");
+      if (existingEmployee) notify(result.message || "Employee details saved.");
+      else setCreatedNotice(result.employee);
       if (canManageVehicles) {
         setCreatedEmployee(result.employee);
         setVehicleCard(null);
@@ -249,16 +265,16 @@ export default function EmployeeCreateModal({
       <section className="modal-card employee-create-modal" role="dialog" aria-modal="true" aria-labelledby={modalId + "-title"}>
         <div className="employee-modal-head">
           <div>
-            <div className="section-kicker">{createdEmployee ? "VEHICLE REGISTRATION" : "PEOPLE SETUP"}</div>
+            {createdEmployee ? <div className="section-kicker">VEHICLE REGISTRATION</div> : null}
             <h2 id={modalId + "-title"}>{createdEmployee ? (registration?.vehicle ? `Register card for ${createdEmployee.name}` : `Add vehicle for ${createdEmployee.name}`) : "Add Employee / Company Owner"}</h2>
-            <p>{registration ? (createdEmployee ? "Scan the card and save to complete registration for this person." : "Review this person and select or add a department, then continue to card registration.") : createdEmployee ? "The person has been created. You can register a vehicle now or finish without a vehicle." : "Create a person and link them to a company department. Each person receives one parking space."}</p>
+            {registration ? <p>{createdEmployee ? "Scan the card and save to complete registration for this person." : "Review this person and select or add a department, then continue to card registration."}</p> : null}
           </div>
           <button type="button" className="modal-close" aria-label="Close form" disabled={pending} onClick={close}>×</button>
         </div>
 
         {!createdEmployee ? <form className="employee-create-form" noValidate onSubmit={submitEmployee}>
           <fieldset disabled={pending} className="employee-details-card">
-            <div className="employee-card-title"><span>01</span><div><strong>Person details</strong><small>{existingEmployee ? "Existing User ID and parking allocation are retained" : "User ID is generated automatically"}</small></div></div>
+            <div className="employee-card-title"><span>01</span><div><strong>Person details</strong>{existingEmployee ? <small>Existing User ID and parking allocation are retained</small> : null}</div></div>
             <div className="employee-fields-grid">
               <label>Full Name<input name="name" autoFocus required value={name} onChange={(event) => setName(event.target.value)} placeholder="e.g. Alex Smith" /></label>
               <div className="employee-generated-field">
@@ -274,7 +290,7 @@ export default function EmployeeCreateModal({
           </fieldset>
 
           <fieldset disabled={pending} className="employee-department-card">
-            <div className="employee-card-title"><span>02</span><div><strong>Department</strong><small>Select an existing department or create a new one</small></div></div>
+            <div className="employee-card-title"><span>02</span><div><strong>Department</strong></div></div>
             <DepartmentPicker
               companyId={companyId}
               departments={departmentOptions}
@@ -291,7 +307,6 @@ export default function EmployeeCreateModal({
                 <button type="button" disabled={addingDepartment || !newDepartment.trim()} onClick={() => void addDepartment()}>{addingDepartment ? "Adding…" : "+ Add"}</button>
               </div>
             </div>
-            <div className="employee-scope-note"><strong>Company scope</strong><span>This person is linked only to this company. Parking cannot exceed the limit assigned to the company.</span></div>
           </fieldset>
 
           <div className="employee-modal-actions">
@@ -299,10 +314,6 @@ export default function EmployeeCreateModal({
             <ActionButton type="submit" className="primary-button" pending={pending} pendingText={existingEmployee ? "Saving..." : "Adding employee..."}>{existingEmployee ? "Save & Continue" : canManageVehicles ? "Add & Continue" : "Add Employee"}</ActionButton>
           </div>
         </form> : <form className="employee-vehicle-step" noValidate onSubmit={submitVehicle}>
-          <div className="employee-created-banner">
-            <div><span>{existingEmployee ? "PERSON DETAILS" : "PERSON CREATED"}</span><strong>{createdEmployee.name}</strong><small>{createdEmployee.userId} · {createdEmployee.department} · Parking limit {createdEmployee.parkingLimit}</small></div>
-            <span className="employee-success-check">✓</span>
-          </div>
           <fieldset disabled={pending} className="employee-vehicle-grid">
             <label>Owner Name<input value={createdEmployee.name} readOnly /></label>
             {registration?.vehicle ? <label>Plate Number<input value={registration.vehicle.plateNumber} readOnly /></label> : <>
@@ -322,9 +333,15 @@ export default function EmployeeCreateModal({
       </section>
     </div> : null}
 
+    {createdNotice ? <div className="employee-created-toast" role="status" aria-live="polite" aria-atomic="true">
+      <span className="employee-toast-icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="m5 12 4 4L19 6" /></svg></span>
+      <div><strong>Employee created</strong><span>{createdNotice.name} <span aria-hidden="true">/</span> {createdNotice.userId}</span></div>
+      <button type="button" aria-label="Dismiss employee notification" onClick={() => setCreatedNotice(null)}><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="m5 5 10 10M15 5 5 15" /></svg></button>
+    </div> : null}
+
     <style>{`
-      .employee-create-modal{width:min(850px,calc(100vw - 30px));max-height:calc(100vh - 30px);padding:0;overflow:hidden;border-radius:13px;display:flex;flex-direction:column}
-      .employee-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;padding:17px 20px 14px;border-bottom:1px solid #e0e7e3;background:#fff}
+      .employee-create-modal{width:min(920px,calc(100vw - 30px));max-height:calc(100dvh - 30px);padding:0;overflow:hidden;border-radius:13px;display:flex;flex-direction:column}
+      .employee-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;padding:14px 18px 12px;border-bottom:1px solid #e0e7e3;background:#fff}
       .employee-modal-head h2{margin:3px 0 0;font-size:20px;color:#15271e}
       .employee-modal-head p{margin:4px 0 0;max-width:650px;color:#6d7972;font-size:11px;line-height:1.4}
       .employee-create-form{display:grid;grid-template-columns:minmax(0,1fr) minmax(310px,.85fr);grid-template-rows:minmax(0,1fr) auto;min-height:0;overflow:hidden}
@@ -356,14 +373,22 @@ export default function EmployeeCreateModal({
       .employee-scope-note span{font-size:9px;line-height:1.4;color:#66776d}
       .employee-modal-actions{grid-column:1/-1;display:flex;justify-content:flex-end;gap:9px;padding:11px 18px;border-top:1px solid #dfe6e2;background:#fff}
       .employee-modal-actions button{min-width:112px}
-      .employee-vehicle-step{overflow:auto}
-      .employee-created-banner{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:15px 18px 0;padding:11px 13px;border:1px solid #cfe6d9;border-radius:9px;background:#f2faf5}
-      .employee-created-banner>div{display:grid;gap:2px}.employee-created-banner span:first-child{font-size:9px;font-weight:900;color:#31865a;letter-spacing:.5px}.employee-created-banner strong{font-size:14px;color:#20362a}.employee-created-banner small{font-size:10px;color:#6d7b73}
-      .employee-success-check{width:29px;height:29px;display:grid;place-items:center;border-radius:50%;background:#dff3e7;color:#1c8b51;font-size:16px;font-weight:900}
-      .employee-vehicle-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px 10px;border:0;padding:15px 18px;margin:0}
+      .employee-vehicle-step{min-height:0;overflow-y:auto;overflow-x:hidden}
+      .employee-vehicle-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px 12px;border:0;padding:14px 18px;margin:0}
       .employee-vehicle-grid label{display:grid;gap:5px;color:#304139;font-size:10.5px;font-weight:800}
       .employee-vehicle-grid input[readonly]{background:#f5f7f6;color:#5f6d65}
       .employee-card-capture,.employee-rfid-note{grid-column:1/-1}
+      .employee-vehicle-grid input,.employee-vehicle-grid select{min-height:34px;padding:6px 9px;font-size:12px}
+      .employee-card-capture .card-capture{padding:10px;gap:7px;border-width:1px;background:#f7faff}
+      .employee-card-capture .card-capture p{font-size:12px;line-height:1.4}
+      .employee-modal-head{flex-shrink:0}.employee-modal-actions{flex-shrink:0}
+      .employee-created-toast{position:fixed;top:22px;right:22px;z-index:20000;display:flex;align-items:center;gap:12px;width:min(340px,calc(100vw - 32px));padding:14px 36px 14px 14px;border:1px solid #bde4d1;border-radius:12px;background:#fff;box-shadow:0 12px 36px rgba(19,56,40,.18);animation:employee-toast-in .18s ease-out}
+      .employee-toast-icon{display:grid;place-items:center;flex-shrink:0;width:36px;height:36px;border-radius:50%;background:#e6f7ed;color:#16824c}
+      .employee-created-toast>div{display:grid;gap:3px;min-width:0}.employee-created-toast strong{font-size:14px;color:#163c2b}.employee-created-toast>div>span{font-size:12px;color:#64756c;overflow-wrap:anywhere}
+      .employee-created-toast button{position:absolute;right:9px;top:9px;display:grid;place-items:center;padding:4px;border:0;border-radius:5px;background:transparent;color:#718278;cursor:pointer}
+      .employee-created-toast button:hover{background:#eef6f1}
+      @keyframes employee-toast-in{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+      @media(prefers-reduced-motion:reduce){.employee-created-toast{animation:none}}
       @media(max-width:760px){.employee-create-modal{width:min(620px,calc(100vw - 20px));max-height:calc(100vh - 20px);overflow:auto}.employee-create-form{grid-template-columns:1fr;overflow:visible}.employee-details-card{border-right:0;border-bottom:1px solid #e1e8e4}.employee-modal-actions{grid-column:auto;position:sticky;bottom:0}.employee-fields-grid,.employee-vehicle-grid{grid-template-columns:1fr}.employee-card-capture,.employee-rfid-note{grid-column:auto}}
     `}</style>
   </>;
