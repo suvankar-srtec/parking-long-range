@@ -9,8 +9,8 @@
 .scanTable th:nth-child(6),.scanTable td:nth-child(6){width:8%}
 .scanTable th:nth-child(7),.scanTable td:nth-child(7){width:10%}
 .scanTable th:nth-child(8),.scanTable td:nth-child(8){width:11%}
-.scanTable th:nth-child(9),.scanTable td:nth-child(9){width:8%}
-.scanTable th:nth-child(10),.scanTable td:nth-child(10){width:19%}
+.scanTable th:nth-child(9),.scanTable td:nth-child(9){width:19%}
+.scanTable th:nth-child(10),.scanTable td:nth-child(10){width:8%}
 
 @media(max-width:700px){
   .headcount{margin-top:12px}
@@ -181,3 +181,9 @@
 }
 
 .onlineEvent{color:#15803d;font-weight:700;white-space:nowrap}.offlineEvent{color:#a16207;font-weight:700;white-space:nowrap}
+
+/* Reserve space for result messages instead of the short source label. */
+@media(min-width:701px){
+ .scanTable th:nth-last-child(2),.scanTable td:nth-last-child(2){width:19%}
+ .scanTable th:last-child,.scanTable td:last-child{width:8%;white-space:nowrap}
+}
