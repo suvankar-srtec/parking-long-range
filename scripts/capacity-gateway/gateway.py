@@ -150,6 +150,14 @@ class Gateway:
             checksum=0
             for byte in frame[:-2]:checksum^=byte
             if checksum!=frame[-2]:raise ValueError('Invalid memory checksum')
+            # Explicit controller fallback override. Gateway decisions still use the
+            # building's antiPassbackEnabled policy; only native timezone APB changes.
+            if self.config.get('native_anti_passback') is False and frame[2]==0x0d:
+                if len(frame)!=21:raise ValueError('Unexpected timezone command length')
+                updated=bytearray(frame);updated[13]&=0x7f
+                updated[-2]=0
+                for byte in updated[:-2]:updated[-2]^=byte
+                value=updated.hex().upper()
             command={'IndexCmd':index,'CmdValue':value}
         with self.native_lock:self.native_command=command
         self.native_error=None

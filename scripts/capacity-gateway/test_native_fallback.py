@@ -67,6 +67,20 @@ class NativeFallbackTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 gateway.sync_native_memory_once()
 
+    def test_native_apb_override_preserves_gateway_apb_and_valid_memory_frame(self):
+        gateway = self.gateway
+        gateway.config['native_anti_passback'] = False
+        payload = bytes([1, 0, 0, 23, 59, 255, 0x81, 26, 10, 25, 0, 0])
+        gateway.native_heartbeat_fields({'Serial': '80M236', 'Key': '1'})
+        gateway.cloud = lambda *args: json.dumps({'IndexCmd': '12', 'CmdValue': frame(0x0d, payload)}).encode()
+        gateway.sync_native_memory_once()
+        reply = gateway.native_heartbeat_fields({'Serial': '80M236', 'Key': '2'})
+        self.assertEqual(reply['CmdValue'], frame(0x0d, payload[:6] + b'\x01' + payload[7:]))
+        self.assertTrue(gateway.ledger.scan('80M236', '0', '1', self.now)['allowed'])
+        self.assertFalse(gateway.ledger.scan('80M236', '0', '1', self.now + 2000)['allowed'])
+        self.assertTrue(gateway.ledger.scan('80M236', '1', '1', self.now + 4000)['allowed'])
+        self.assertTrue(gateway.ledger.scan('80M236', '0', '1', self.now + 6000)['allowed'])
+
     def test_slow_cloud_memory_sync_never_blocks_local_heartbeat_or_capacity_decision(self):
         gateway = self.gateway
         entered = threading.Event()
