@@ -1,3 +1,5 @@
+import { isPrimarySuperAdmin } from "@/lib/super-admin-scope";
+import { hasPermission } from "@/lib/permissions";
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/session";
 import { canCreateEntity, normalizeEntityName, type EntityKind } from "@/lib/entity-identity";
@@ -20,6 +22,12 @@ export async function POST(request: Request) {
     const previousReservationId = typeof body.previousReservationId === "string" ? body.previousReservationId : undefined;
 
     let allowed = canCreateEntity(user, kind, scopeId);
+    if (kind === "company" && allowed) {
+      const building = await prisma.building.findUnique({ where: { id: scopeId }, select: { superAdminId: true } });
+      allowed = !!building && (user.role === "SUPER_ADMIN"
+        ? isPrimarySuperAdmin(user) || building.superAdminId === user.id
+        : hasPermission(user, "building.createCompanies"));
+    }
     if (kind === "employee") {
       allowed = false;
       if (user.role === "BUILDING_ADMIN" && user.buildingId && scopeId) {

@@ -1,3 +1,4 @@
+import { isPrimarySuperAdmin } from "@/lib/super-admin-scope";
 import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
@@ -15,6 +16,13 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     const authorized = user && (user.role === "SUPER_ADMIN" || (user.role === "BUILDING_ADMIN" && user.buildingId === buildingId && hasPermission(user, "building.createCompanies")));
     if (!authorized || !user) {
       return NextResponse.json({ ok: false, message: "You do not have permission to create companies in this building." }, { status: 403 });
+    }
+
+    if (user.role === "SUPER_ADMIN" && !isPrimarySuperAdmin(user)) {
+      const building = await prisma.building.findUnique({ where: { id: buildingId }, select: { superAdminId: true } });
+      if (!building || building.superAdminId !== user.id) {
+        return NextResponse.json({ ok: false, message: "This building is outside your scope." }, { status: 403 });
+      }
     }
 
     let body;

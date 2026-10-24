@@ -18,7 +18,7 @@ export function canCreateEntity(
 ) {
   if (!user) return false;
   if (kind === "building") return user.role === "SUPER_ADMIN" && scopeId === "";
-  if (kind === "company") return user.role === "BUILDING_ADMIN" && !!scopeId && user.buildingId === scopeId;
+  if (kind === "company") return !!scopeId && (user.role === "SUPER_ADMIN" || user.role === "BUILDING_ADMIN" && user.buildingId === scopeId);
   if (kind === "supervisor") {
     if (!scopeId) return false;
     if (user.role === "SUPER_ADMIN") return true;

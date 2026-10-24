@@ -62,8 +62,6 @@ export default function CompanyList({
     });
   }, [companies, query]);
 
-  if (companies.length === 0) return <p className="muted">No companies created yet.</p>;
-
   const searchControl = <div className={styles.searchBar}>
     <div className={styles.searchField}>
       <span aria-hidden="true">⌕</span>
@@ -190,6 +188,6 @@ export default function CompanyList({
           </div> : null}
         </article>;
       })}
-    </div> : <div className={styles.noResults}>No companies match “{query}”.</div>}
+    </div> : <div className={styles.noResults}>{companies.length === 0 ? "No companies created yet." : <>No companies match "{query}".</>}</div>}
   </>;
 }
