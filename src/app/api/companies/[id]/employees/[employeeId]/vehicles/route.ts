@@ -54,7 +54,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       if (!companyDepartment) throw new ParkingError("Select a valid department for this company.", 400);
       await lockBuildingParking(tx, company.buildingId);
       const employeeUsed = await tx.vehicle.count({ where: { employeeId } });
-      if (employeeUsed >= employee.parkingLimit) throw new ParkingError(`This person has reached the assigned parking limit of ${employee.parkingLimit}.`, 400);
+      if (employeeUsed >= Math.min(employee.parkingLimit, 1)) throw new ParkingError("Only one parking space is allowed per employee or company owner.", 400);
       const enrollment = enrollmentId ? await consumeCardEnrollment(tx, { enrollmentId, ownerId: user.id, companyId, employeeId, buildingId: company.buildingId }) : null;
       const vehicle = await tx.vehicle.create({ data: { ownerName, plateNumber, vehicleType, isStaff, department, rfidCardNo: enrollment?.cardNo || null, companyId, employeeId } });
       if (enrollment) await tx.rfidEvent.create({ data: { readerId: enrollment.readerId, buildingId: company.buildingId, companyId, vehicleId: vehicle.id, deviceNumber: enrollment.reader.deviceNumber, cardNo: enrollment.cardNo!, action: "REGISTER", code: "0000", message: "Card registered to vehicle." } });

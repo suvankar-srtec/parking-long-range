@@ -191,7 +191,6 @@ export default function EmployeeCreateModal({
       name: String(data.get("name") ?? "").trim(),
       reservationId,
       category: String(data.get("category") ?? "EMPLOYEE"),
-      parkingLimit: Number(data.get("parkingLimit") ?? 1),
       department,
     };
 
@@ -252,7 +251,7 @@ export default function EmployeeCreateModal({
           <div>
             <div className="section-kicker">{createdEmployee ? "VEHICLE REGISTRATION" : "PEOPLE SETUP"}</div>
             <h2 id={modalId + "-title"}>{createdEmployee ? (registration?.vehicle ? `Register card for ${createdEmployee.name}` : `Add vehicle for ${createdEmployee.name}`) : "Add Employee / Company Owner"}</h2>
-            <p>{registration ? (createdEmployee ? "Scan the card and save to complete registration for this person." : "Review this person and select or add a department, then continue to card registration.") : createdEmployee ? "The person has been created. You can register a vehicle now or finish without a vehicle." : "Create a person, assign their parking limit, and link them to a company department."}</p>
+            <p>{registration ? (createdEmployee ? "Scan the card and save to complete registration for this person." : "Review this person and select or add a department, then continue to card registration.") : createdEmployee ? "The person has been created. You can register a vehicle now or finish without a vehicle." : "Create a person and link them to a company department. Each person receives one parking space."}</p>
           </div>
           <button type="button" className="modal-close" aria-label="Close form" disabled={pending} onClick={close}>×</button>
         </div>
@@ -271,7 +270,6 @@ export default function EmployeeCreateModal({
                 {generationError ? <small className="employee-id-error">{generationError}</small> : null}
               </div>
               <label>Person Type<select name="category" defaultValue={existingEmployee?.category || "EMPLOYEE"} disabled={Boolean(existingEmployee)} required><option value="EMPLOYEE">Employee</option><option value="OWNER">Company Owner</option></select></label>
-              <label>Parking Limit<input name="parkingLimit" type="number" min={existingEmployee ? "0" : "1"} step="1" defaultValue={existingEmployee?.parkingLimit ?? 1} readOnly={Boolean(existingEmployee)} required /></label>
             </div>
           </fieldset>
 

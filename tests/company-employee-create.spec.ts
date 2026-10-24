@@ -36,13 +36,14 @@ test("Company people permission enables scoped employee creation and ID generati
       expect((await context.request.post(`/api/companies/${other.id}/employees`,{data:{name:"Wrong scope"}})).status()).toBe(403);
       await page.getByRole("button",{name:"Add Employee",exact:true}).click();
       const dialog=page.getByRole("dialog",{name:"Add Employee / Company Owner"});
+      await expect(dialog.getByLabel("Parking Limit",{exact:true})).toHaveCount(0);
       await dialog.getByLabel("Full Name",{exact:true}).fill(tag+user.role);
       if(user.role==="BUILDING_OWNER") await dialog.getByLabel("Person Type").selectOption("OWNER");
       await expect(dialog.getByLabel("User ID",{exact:true})).toHaveValue(/^EMP\d+$/);
       const created=page.waitForResponse(r=>r.url().endsWith(`/api/companies/${company.id}/employees`)&&r.request().method()==="POST");
       await dialog.getByRole("button",{name:"Add Employee",exact:true}).click();
       const response=await created;expect(response.status()).toBe(201);
-      const data=await response.json();expect(data.employee.department).toBe("Sales");
+      const data=await response.json();expect(data.employee.department).toBe("Sales");expect(data.employee.parkingLimit).toBe(1);
       expect(data.employee.category).toBe(user.role==="BUILDING_OWNER"?"OWNER":"EMPLOYEE");
       await expect(dialog).not.toBeVisible();
       expect(await prisma.employee.count({where:{id:data.employee.id,companyId:company.id}})).toBe(1);
