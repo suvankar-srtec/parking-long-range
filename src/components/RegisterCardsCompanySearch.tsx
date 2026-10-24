@@ -14,10 +14,8 @@ type Company = {
 
 export default function RegisterCardsCompanySearch({
   companies,
-  buildingAdmin = false,
 }: {
   companies: Company[];
-  buildingAdmin?: boolean;
 }) {
   const [query, setQuery] = useState("");
   const filtered = useMemo(() => {
@@ -34,10 +32,7 @@ export default function RegisterCardsCompanySearch({
     <div className="portfolio-header rfid-register-header">
       <div>
         <div className="section-kicker">COMPANIES</div>
-        <h2>{buildingAdmin ? "Companies in this building" : "Companies"}</h2>
-        <p>{buildingAdmin
-          ? "All companies assigned to your building are shown here."
-          : "Companies available in your current Super Admin scope."}</p>
+
       </div>
 
       <div className="rfid-company-controls">

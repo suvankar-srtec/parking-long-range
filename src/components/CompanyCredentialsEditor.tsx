@@ -43,7 +43,6 @@ export default function CompanyCredentialsEditor({
     <div className="company-credentials-head">
       <div>
         <span>COMPANY LOGIN</span>
-        <strong>Account credentials</strong>
       </div>
       <ActionButton type="submit" className="secondary-button company-credentials-save" pending={pending} pendingText="Saving…" disabled={!dirty || pending}>
         Update password

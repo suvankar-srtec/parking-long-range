@@ -58,7 +58,6 @@ export default function RegisterCardsEmployeeSearch({
           aria-label="Search employees and RFID cards"
         />
       </div>
-      <span>{filtered.length} of {employees.length}</span>
     </div>
 
     {filtered.length ? <div className="rfid-employee-table-wrap">

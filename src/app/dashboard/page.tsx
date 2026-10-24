@@ -14,6 +14,7 @@ import EmployeeCreateModal from "@/components/EmployeeCreateModal";
 import SupervisorHeadcount from "@/components/SupervisorHeadcount";
 import CompanyCredentialsEditor from "@/components/CompanyCredentialsEditor";
 import CompanyParkingSummary from "@/components/CompanyParkingSummary";
+import BuildingParkingSummary from "@/components/BuildingParkingSummary";
 import OwnerParkingVehicleModal from "@/components/OwnerParkingVehicleModal";
 import OwnerVehicleDetailsList from "@/components/OwnerVehicleDetailsList";
 
@@ -80,21 +81,9 @@ export default async function DashboardPage() {
       <section className="portfolio-card building-management">
         <div className="portfolio-header"><div><h2>Parking allocation</h2><p className="parking-formula">Total parking = Owner + Visitor + Company</p></div></div>
         <div className="portfolio-divider" />
-        <div className="building-parking-summary">
-          <div className="building-parking-row building-parking-row-primary">
-            <div className="large-stat"><span>Total parking</span><strong>{building.totalParking}</strong></div>
-            <div className="large-stat"><span>Owner parking</span><strong>{building.ownerParking}</strong></div>
-            <div className="large-stat"><span>Visitor parking</span><strong>{building.visitorParking}</strong></div>
-            <div className="large-stat"><span>Company parking</span><strong>{building.companyParking}</strong></div>
-            <div className="large-stat maximum-gate-stat"><span>Maximum Gates</span><strong>{building.maximumGate}</strong></div>
-          </div>
-          <div className="building-parking-row building-parking-row-secondary">
-            <div className="large-stat"><span>Allotted</span><strong>{allocated}</strong></div>
-            <div className="large-stat"><span>Available</span><strong>{available}</strong></div>
-          </div>
-        </div>
+        <BuildingParkingSummary total={building.totalParking} owner={building.ownerParking} visitor={building.visitorParking} company={building.companyParking} gates={building.maximumGate} allotted={allocated} available={available} />
         <style>{`
-          .parking-formula{margin:5px 0 0;color:#52667d;font-size:13px;font-weight:700}.building-parking-summary{display:grid;gap:10px;margin-top:10px}.building-parking-row{display:grid;gap:10px}.building-parking-row-primary{grid-template-columns:repeat(5,minmax(0,1fr))}.building-parking-row-secondary{grid-template-columns:repeat(2,minmax(0,1fr))}.building-parking-summary .large-stat{min-width:0}.building-parking-summary .maximum-gate-stat{background:#eaf3ff;border-color:#9fc5ec}.building-parking-summary .maximum-gate-stat span,.building-parking-summary .maximum-gate-stat strong{color:#0f4f97}.owner-parking-toolbar{display:flex;align-items:center;justify-content:space-between;gap:16px}.owner-parking-stats{display:grid;grid-template-columns:repeat(3,minmax(110px,1fr));gap:10px;flex:1}.owner-vehicle-list{display:grid;gap:8px;margin-top:14px}.owner-vehicle-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border:1px solid #dbe3df;border-radius:10px;background:#fafcfb}.owner-vehicle-row span{font-size:12px;color:#647168}.owner-vehicle-row strong{font-size:13px}@media(max-width:1000px){.building-parking-row-primary{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:760px){.building-parking-row-primary,.building-parking-row-secondary{grid-template-columns:1fr}.owner-parking-toolbar{align-items:stretch;flex-direction:column}.owner-parking-stats{grid-template-columns:1fr}}
+          .parking-formula{margin:5px 0 0;color:#52667d;font-size:13px;font-weight:700}.owner-parking-toolbar{display:flex;align-items:center;justify-content:space-between;gap:16px}.owner-parking-stats{display:grid;grid-template-columns:repeat(3,minmax(110px,1fr));gap:10px;flex:1}.owner-vehicle-list{display:grid;gap:8px;margin-top:14px}.owner-vehicle-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border:1px solid #dbe3df;border-radius:10px;background:#fafcfb}.owner-vehicle-row span{font-size:12px;color:#647168}.owner-vehicle-row strong{font-size:13px}@media(max-width:760px){.owner-parking-toolbar{align-items:stretch;flex-direction:column}.owner-parking-stats{grid-template-columns:1fr}}
         `}</style>
       </section>
 
@@ -174,7 +163,7 @@ export default async function DashboardPage() {
 
     return <main className="dashboard-page"><Sidebar role={user.role} permissions={permissions} /><section className="dashboard-main">
       <header className="topbar"><div><div className="section-kicker">{roleLabel(user.role).toUpperCase()}</div><h1>{company.name}</h1></div><div className="topbar-right"><div className="summary-card"><span>Building</span><strong>{company.building.name}</strong></div><SignOutButton /></div></header>
-      {canViewUsage ? <section className="portfolio-card building-management"><div className="portfolio-header"><div><div className="section-kicker">COMPANY PARKING</div><h2>Parking allocation</h2><p>Company parking usage available to this account.</p></div></div><div className="portfolio-divider" /><CompanyCredentialsEditor userId={user.userId} companyName={company.name} initialPassword={user.password} /><CompanyParkingSummary limit={company.parkingAllocation} visitors={company.visitorParkingAllocation} employees={peopleCount} vehicles={used} available={available} /></section> : null}
+      {canViewUsage ? <section className="portfolio-card building-management"><div className="portfolio-header"><div><div className="section-kicker">COMPANY PARKING</div></div></div><div className="portfolio-divider" /><CompanyCredentialsEditor userId={user.userId} companyName={company.name} initialPassword={user.password} /><CompanyParkingSummary limit={company.parkingAllocation} visitors={company.visitorParkingAllocation} employees={peopleCount} vehicles={used} available={available} /></section> : null}
       {(canManagePeople || canManageVehicles) ? <section className="portfolio-card building-management"><div className="employee-section-header"><div><div className="section-kicker">EMPLOYEES</div><h2>Employees & Company Owners</h2></div>{canManagePeople ? <EmployeeCreateModal companyId={company.id} departments={company.departments} maximumDepartments={company.maximumDepartments} canManageVehicles={canManageVehicles} canRegisterRfid={canRegisterRfid} /> : null}</div><div className="portfolio-divider" /><EmployeeList companyId={company.id} employees={company.employees} departments={company.departments} /></section> : null}
     </section></main>;
   }

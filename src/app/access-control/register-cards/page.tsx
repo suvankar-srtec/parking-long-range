@@ -46,15 +46,11 @@ export default async function RegisterCardsPage() {
       <section className="portfolio-card building-management rfid-register-card">
         {companies.length ? <RegisterCardsCompanySearch
           companies={companies}
-          buildingAdmin={user.role === "BUILDING_ADMIN"}
         /> : <>
           <div className="portfolio-header rfid-register-header">
             <div>
               <div className="section-kicker">COMPANIES</div>
-              <h2>{user.role === "BUILDING_ADMIN" ? "Companies in this building" : "Companies"}</h2>
-              <p>{user.role === "BUILDING_ADMIN"
-                ? "All companies assigned to your building are shown here."
-                : "Companies available in your current Super Admin scope."}</p>
+
             </div>
           </div>
           <div className="portfolio-divider" />
