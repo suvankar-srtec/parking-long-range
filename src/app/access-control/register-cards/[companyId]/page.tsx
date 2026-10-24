@@ -55,7 +55,7 @@ export default async function CompanyCardsPage({ params }: { params: Promise<{ c
       </header>
       <section className="portfolio-card building-management">
         <div className="portfolio-header">
-          <div><div className="section-kicker">COMPANY EMPLOYEES</div><h2>Employees &amp; RFID cards</h2><p>Use Register card to open the employee/company-owner setup flow and continue to vehicle and RFID registration.</p></div>
+          <div><div className="section-kicker">COMPANY EMPLOYEES</div></div>
           <div className={styles.summary}><span><strong>{company.employees.length}</strong> Employees</span><span><strong>{registered}</strong> With cards</span></div>
         </div>
         <div className="portfolio-divider" />
