@@ -1,0 +1,8 @@
+.scanTime{display:block;margin-top:3px;color:#61738b;font-size:10px;font-weight:400}
+@media(min-width:701px){
+ .wrap{overflow-x:auto}
+ .table{min-width:1140px;table-layout:auto}
+ .table th:nth-child(n),.table td:nth-child(n){width:auto}
+ .table th:first-child,.table td:first-child,.table th:nth-child(2),.table td:nth-child(2),.table td:nth-last-child(2){white-space:nowrap}
+ .table td:last-child{white-space:normal}
+}

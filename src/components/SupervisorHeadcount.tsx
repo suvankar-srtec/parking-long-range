@@ -5,13 +5,14 @@ import { manualExitResult, scanResultMessage } from "@/lib/rfid-display";
 import { Spinner } from "./LoadingIndicator";
 import { useFeedback, useMutation } from "./FeedbackProvider";
 import TableColumnFilter from "./TableColumnFilter";
+import LiveVisitTable, { VISIT_COLUMNS as LIVE_COLUMNS } from "./LiveVisitTable";
 import styles from "./SupervisorHeadcount.module.css";
 
-const LIVE_COLUMNS = ["Time", "Device", "RFID", "Vehicle", "Owner", "Employee", "Company", "Action", "Result", "Event Type"] as const;
 
 type ScanEvent = {
   eventType: "Online" | "Offline" | null;
   id: string;
+  entityKey?: string;
   action: string;
   code: string;
   message: string;
@@ -72,12 +73,6 @@ function popupTitle(event: PopupState) {
   if (event.action === "IGNORED") return "Scan Ignored";
   if (event.tone === "denied") return "Access Denied";
   return "RFID Scan";
-}
-
-function eventResult(event: ScanEvent) {
-  if (event.deviceNumber === "MANUAL" && event.action === "EXIT") return manualExitResult(event.message);
-  if (event.code === "0000") return event.action === "ENTRY" ? "Entry allowed" : event.action === "EXIT" ? "Exit allowed" : event.message;
-  return scanResultMessage(event.message) || "Denied";
 }
 
 function mergeEvents(current: ScanEvent[], incoming: ScanEvent[]) {
@@ -245,9 +240,7 @@ export default function SupervisorHeadcount({
 
     {showLiveDashboard ? <section className={`portfolio-card ${styles.scanTableCard}`}>
       <div className={styles.scanTableHeader}><div><div className="section-kicker">RFID ACTIVITY</div><h2>Live Dashboard</h2></div><TableColumnFilter columns={LIVE_COLUMNS} selected={visibleColumns} onChange={setVisibleColumns} /></div>
-      {showActivity ? <div className={styles.tableWrap}><table className={styles.scanTable}><thead><tr><th hidden={!visibleColumns.has(0)}>Time</th><th hidden={!visibleColumns.has(1)}>Device</th><th hidden={!visibleColumns.has(2)}>RFID</th><th hidden={!visibleColumns.has(3)}>Vehicle</th><th hidden={!visibleColumns.has(4)}>Owner</th><th hidden={!visibleColumns.has(5)}>Employee</th><th hidden={!visibleColumns.has(6)}>Company</th><th hidden={!visibleColumns.has(7)}>Action</th><th hidden={!visibleColumns.has(8)}>Result</th><th hidden={!visibleColumns.has(9)}>Event Type</th></tr></thead><tbody>
-        {visibleColumns.size === 0 ? <tr><td className={styles.emptyTable}>Select a column to display the activity table.</td></tr> : data?.recentEvents.length ? data.recentEvents.map((event) => <tr key={event.id}><td hidden={!visibleColumns.has(0)} data-label="Time">{new Date(event.createdAt).toLocaleString([], { hour: "2-digit", minute: "2-digit", second: "2-digit", month: "short", day: "2-digit" })}</td><td hidden={!visibleColumns.has(1)} data-label="Device">{event.deviceNumber || "-"}</td><td hidden={!visibleColumns.has(2)} data-label="RFID / QR">{event.cardNo || "-"}</td><td hidden={!visibleColumns.has(3)} data-label="Vehicle">{event.vehicle?.plateNumber || "-"}</td><td hidden={!visibleColumns.has(4)} data-label="Owner" className={event.personType === "OWNER" ? styles.ownerPerson : undefined}>{event.personType === "OWNER" ? event.vehicle?.ownerName || "-" : "-"}</td><td hidden={!visibleColumns.has(5)} data-label="Employee" className={event.personType === "EMPLOYEE" ? styles.employeePerson : undefined}>{event.personType === "EMPLOYEE" ? event.vehicle?.ownerName || "-" : "-"}</td><td hidden={!visibleColumns.has(6)} data-label="Company">{event.company?.name || "-"}</td><td hidden={!visibleColumns.has(7)} data-label="Action"><span className={`${styles.actionBadge} ${event.action === "ENTRY" ? styles.entryBadge : event.action === "EXIT" ? styles.exitBadge : styles.deniedBadge}`}>{event.action}</span></td><td hidden={!visibleColumns.has(8)} data-label="Result" className={event.code === "0000" ? styles.successResult : styles.deniedResult}>{eventResult(event)}</td><td hidden={!visibleColumns.has(9)} data-label="Event Type"><span className={event.eventType === "Offline" ? styles.offlineEvent : styles.onlineEvent}>{event.eventType || "-"}</span></td></tr>) : <tr><td colSpan={Math.max(visibleColumns.size, 1)} className={styles.emptyTable}>No ENTRY, EXIT, IGNORED, or DENIED RFID activity has been recorded yet.</td></tr>}
-      </tbody></table></div> : <p className="muted">RFID activity access is not assigned to this Supervisor.</p>}
+      {showActivity ? <LiveVisitTable events={data?.recentEvents || []} visibleColumns={visibleColumns} /> : <p className="muted">RFID activity access is not assigned to this Supervisor.</p>}
     </section> : null}
   </>;
 }

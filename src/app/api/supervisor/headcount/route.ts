@@ -103,6 +103,9 @@ export async function GET(request: Request) {
         code: true,
         message: true,
         cardNo: true,
+        vehicleId: true,
+        ownerVehicleId: true,
+        visitorId: true,
         deviceNumber: true,
         createdAt: true,
         vehicle: {
@@ -203,6 +206,7 @@ export async function GET(request: Request) {
 
     return {
       ...event,
+      entityKey: event.vehicleId ? `vehicle:${event.vehicleId}` : event.ownerVehicleId ? `owner:${event.ownerVehicleId}` : event.visitorId ? `visitor:${event.visitorId}` : undefined,
       eventType: scanEventType(event),
       cardNo: visitor ? "VISITOR QR" : event.cardNo,
       vehicle,
