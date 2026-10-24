@@ -1,3 +1,4 @@
+import { canCreateCompanyPeople } from "@/lib/employee-creation";
 import { isPrimarySuperAdmin } from "@/lib/super-admin-scope";
 import { hasPermission } from "@/lib/permissions";
 import { NextResponse } from "next/server";
@@ -29,14 +30,10 @@ export async function POST(request: Request) {
         : hasPermission(user, "building.createCompanies"));
     }
     if (kind === "employee") {
-      allowed = false;
-      if (user.role === "BUILDING_ADMIN" && user.buildingId && scopeId) {
-        const company = await prisma.company.findFirst({
-          where: { id: scopeId, buildingId: user.buildingId },
-          select: { id: true },
-        });
-        allowed = Boolean(company);
-      }
+      const company = scopeId ? await prisma.company.findUnique({
+        where: { id: scopeId }, select: { id: true, buildingId: true, enabled: true },
+      }) : null;
+      allowed = !!company && company.enabled && canCreateCompanyPeople(user, company);
     }
 
     if (!allowed) {

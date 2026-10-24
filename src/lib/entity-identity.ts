@@ -24,5 +24,5 @@ export function canCreateEntity(
     if (user.role === "SUPER_ADMIN") return true;
     return user.role === "BUILDING_ADMIN" && user.buildingId === scopeId;
   }
-  return user.role === "COMPANY_ADMIN" && !!scopeId && user.companyId === scopeId;
+  return ["COMPANY_ADMIN", "BUILDING_OWNER"].includes(user.role) && !!scopeId && user.companyId === scopeId;
 }
