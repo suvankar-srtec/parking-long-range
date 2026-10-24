@@ -1,3 +1,7 @@
+export function scanResultMessage(message: string) {
+  return message.toLowerCase() === "owner parking allocation is full" ? "Allocation full" : message;
+}
+
 export function manualExitResult(message: string) {
   const approved = /approved by\s+(.+?)\s*$/i.exec(message)?.[1];
   if (!approved) return message || "Manual exit";

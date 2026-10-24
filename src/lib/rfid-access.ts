@@ -394,7 +394,7 @@ export async function processReaderScan(input: ParsedRfidReaderMessage, transpor
 
       if (ownerVehicle) {
         if (ownerInside >= building.ownerParking || totalInside >= building.totalParking) {
-          return record(READER_NO_SUCCESS_CODE, "Owner Parking allocation is full", "DENIED", undefined, undefined, ownerVehicle.id);
+          return record(READER_NO_SUCCESS_CODE, "Allocation full", "DENIED", undefined, undefined, ownerVehicle.id);
         }
       } else {
         const isCompanyOwner = vehicle!.employee.category === "OWNER";

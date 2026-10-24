@@ -99,7 +99,7 @@ class Ledger:
             owners=sum(r['n'] for r in counts if r['pool']=='owner')
             company_total=sum(r['n'] for r in counts if r['pool']=='company')+m.get('companyVisitorInside',0)
             if total>=m['limits']['total']:return finish('DENIED','Building parking allocation is full')
-            if row['pool']=='owner' and owners>=m['limits']['owner']:return finish('DENIED','Owner Parking allocation is full')
+            if row['pool']=='owner' and owners>=m['limits']['owner']:return finish('DENIED','Allocation full')
             if row['pool']=='company':
                 company=next((r for r in m['companies'] if r['id']==row['company']),None)
                 occupied=sum(r['n'] for r in counts if r['company']==row['company'] and r['category']==row['category'])
