@@ -12,11 +12,11 @@ export default function CompanyParkingSummary({ limit, visitors, employees, vehi
   limit: number; visitors: number; employees: number; vehicles: number; available: number;
 }) {
   const metrics = [
-    { label: "Company limit", value: limit, icon: "capacity" },
+    { label: "Company Parking", value: limit, icon: "capacity" },
     { label: "Visitor parking", value: visitors, icon: "visitor" },
     { label: "Total employees", value: employees, icon: "employee" },
     { label: "Registered vehicles", value: vehicles, icon: "vehicle" },
-    { label: "Unassigned", value: available, icon: "available" },
+    { label: "Unassigned Parking", value: available, icon: "available" },
   ] as const;
   return <dl className={styles.summary} aria-label="Company parking summary">
     {metrics.map(metric => <div key={metric.icon} className={`${styles.metric} ${styles[metric.icon]}`}>
