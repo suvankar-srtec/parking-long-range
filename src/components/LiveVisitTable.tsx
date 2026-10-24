@@ -32,7 +32,7 @@ export default function LiveVisitTable({ events, visibleColumns }: { events: Vis
         event.company?.name, status, result, sources,
       ];
       return <tr key={row.id}>{values.map((value, index) => <td key={VISIT_COLUMNS[index]} data-label={VISIT_COLUMNS[index]} hidden={!visibleColumns.has(index)} className={index === 10 ? allowed ? styles.successResult : styles.deniedResult : undefined}>
-        {value || "—"}{index === 10 && !row.entry && !row.exit ? <small className={visitStyles.scanTime}>{time(event)}</small> : null}
+        {index === 10 ? <span className={visitStyles.resultText}>{value || "—"}</span> : value || "—"}{index === 10 && !row.entry && !row.exit ? <small className={visitStyles.scanTime}>{time(event)}</small> : null}
       </td>)}</tr>;
     })}</tbody>
   </table></div>;

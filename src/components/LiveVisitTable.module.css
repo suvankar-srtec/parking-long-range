@@ -12,7 +12,8 @@
 .table th:last-child,.table td:last-child{width:1%;padding-left:8px}
 .table td:last-child{color:#936520;font-weight:600;white-space:nowrap}
 .table [hidden]{display:none!important}
-.scanTime{display:block;margin-top:3px;color:#61738b;font-size:10px;font-weight:400}
+.resultText{display:block;width:90px;white-space:normal;overflow-wrap:break-word}
+.scanTime{width:90px;white-space:normal;display:block;margin-top:3px;color:#61738b;font-size:10px;font-weight:400}
 @media(max-width:700px){
  .wrap{max-height:none;overflow:visible;padding:10px;box-sizing:border-box}
  .table,.table tbody{display:block;width:100%;min-width:0}
@@ -22,4 +23,5 @@
  .table td::before{content:attr(data-label);display:block;margin-bottom:3px;color:#738398;font-size:9px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
  .table td:nth-child(9),.table td:last-child{max-width:none}
  .table td:nth-last-child(2),.table td:last-child{width:auto;padding:0;white-space:normal}
+ .resultText,.scanTime{width:auto;max-width:100%}
 }
