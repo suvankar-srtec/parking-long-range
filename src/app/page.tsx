@@ -28,7 +28,6 @@ export default function LoginPage() {
 
   return <main className="login-page"><section className="login-card">
     <div className="brand-badge">SRTEC Access Control</div>
-    <div className="login-heading"><span>WELCOME BACK</span><h1>Sign in</h1><p>Enter your User ID and password.</p></div>
     <form className="login-form" noValidate aria-busy={pending} onSubmit={submit}>
       <label>User ID<input name="userId" placeholder="User ID" required autoComplete="username" disabled={pending} /></label>
       <PasswordInput label="Password" name="password" placeholder="Password" required autoComplete="current-password" disabled={pending} />
