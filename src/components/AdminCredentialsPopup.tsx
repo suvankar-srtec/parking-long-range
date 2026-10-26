@@ -27,9 +27,19 @@ export default function AdminCredentialsPopup() {
   useEffect(() => {
     if (!open) return;
     const previousOverflow = document.body.style.overflow;
+    const dashboard = trigger.current?.closest("main");
+    const previousInert = dashboard?.inert;
+    const previousIsolation = dashboard?.style.isolation;
+    // The dialog is portaled outside main. Contain every dashboard stacking layer
+    // and prevent background controls from receiving focus or pointer events.
+    if (dashboard) { dashboard.inert = true; dashboard.style.isolation = "isolate"; }
     document.body.style.overflow = "hidden";
     dialog.current?.focus();
-    return () => { document.body.style.overflow = previousOverflow; trigger.current?.focus(); };
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      if (dashboard) { dashboard.inert = previousInert ?? false; dashboard.style.isolation = previousIsolation || ""; }
+      trigger.current?.focus();
+    };
   }, [open]);
 
   async function show() {
