@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { pairVisitScans, type VisitScan } from "@/lib/rfid-visits";
+import { pairVisitScans, filterVisitRows, type VisitScan } from "@/lib/rfid-visits";
 import { manualExitResult, scanResultMessage } from "@/lib/rfid-display";
 import styles from "./SupervisorHeadcount.module.css";
 import visitStyles from "./LiveVisitTable.module.css";
@@ -19,12 +19,13 @@ function time(event: VisitScan | null) {
   </time>;
 }
 
-export default function LiveVisitTable({ events, visibleColumns }: { events: VisitScan[]; visibleColumns: Set<number> }) {
-  const rows = useMemo(() => pairVisitScans(events), [events]);
+export default function LiveVisitTable({ events, visibleColumns, searchQuery = "" }: { events: VisitScan[]; visibleColumns: Set<number>; searchQuery?: string }) {
+  const visits = useMemo(() => pairVisitScans(events), [events]);
+  const rows = useMemo(() => filterVisitRows(visits, searchQuery), [visits, searchQuery]);
   const totalWidth = COLUMN_WIDTHS.reduce((sum, width, index) => sum + (visibleColumns.has(index) ? width : 0), 0);
   return <div className={visitStyles.wrap}><table className={visitStyles.table}>
     <thead><tr>{VISIT_COLUMNS.map((label, index) => <th key={label} hidden={!visibleColumns.has(index)} style={{ width: totalWidth ? `${COLUMN_WIDTHS[index] / totalWidth * 100}%` : undefined }}>{label}</th>)}</tr></thead>
-    <tbody>{!visibleColumns.size || !rows.length ? <tr><td colSpan={Math.max(visibleColumns.size, 1)} className={styles.emptyTable}>{visibleColumns.size ? "No RFID activity has been recorded yet." : "Select a column to display the activity table."}</td></tr> : rows.map(row => {
+    <tbody>{!visibleColumns.size || !rows.length ? <tr><td colSpan={Math.max(visibleColumns.size, 1)} className={styles.emptyTable}>{visibleColumns.size ? searchQuery.trim() ? "No visits match your search." : "No RFID activity has been recorded yet." : "Select a column to display the activity table."}</td></tr> : rows.map(row => {
       const event = row.latest;
       const allowed = event.code === "0000";
       const result = event.deviceNumber === "MANUAL" && event.action === "EXIT" ? manualExitResult(event.message) : allowed ? row.exit ? "Exit allowed" : row.entry ? "Entry allowed" : scanResultMessage(event.message) : scanResultMessage(event.message);

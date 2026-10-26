@@ -446,7 +446,7 @@ export default function ReportsDashboard({
 
     <section className={styles.reportTableCard}>
       <div className={styles.tableHeader}><strong>{reportTitle}</strong></div>
-      <div className={styles.tableWrap}>
+      <div className={`${styles.tableWrap} ${role === "EMPLOYEE" ? styles.supervisorReport : ""}`}>
         <table>
           <thead><tr>{visibleColumns.map((column) => <th key={column.key}>{column.label}</th>)}</tr></thead>
           <tbody>{filtered.length ? filtered.map((row) => <tr key={row.id}>

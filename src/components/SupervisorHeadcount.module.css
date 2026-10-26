@@ -187,3 +187,8 @@
  .scanTable th:nth-last-child(2),.scanTable td:nth-last-child(2){width:19%}
  .scanTable th:last-child,.scanTable td:last-child{width:8%;white-space:nowrap}
 }
+
+.liveTableControls{display:flex;align-items:center;justify-content:flex-end;gap:10px;min-width:0}
+.liveTableSearch{width:290px;max-width:100%;min-height:34px;padding:7px 11px;border:1px solid #cbdced;border-radius:8px;background:#fff;color:#29415b;font:inherit;font-size:12px}
+.liveTableSearch:focus-visible{outline:2px solid #1769c2;outline-offset:2px}
+@media(max-width:700px){.scanTableHeader{flex-wrap:wrap}.liveTableControls{width:100%;justify-content:space-between}.liveTableSearch{width:100%;min-width:0;flex:1}}

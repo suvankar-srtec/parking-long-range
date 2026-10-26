@@ -58,6 +58,7 @@ export default function RealtimeMonitor({
 }) {
   const [buildingId, setBuildingId] = useState(fixedBuildingId || buildings[0]?.id || "");
   const [companyId, setCompanyId] = useState(fixedCompanyId || "");
+  const [searchQuery, setSearchQuery] = useState("");
   const [visibleColumns, setVisibleColumns] = useState<Set<number>>(() => new Set(LIVE_COLUMNS.map((_, index) => index)));
   const [data, setData] = useState<Headcount | null>(null);
   const [error, setError] = useState("");
@@ -186,8 +187,8 @@ export default function RealtimeMonitor({
     </section>
 
     <section className={`portfolio-card ${styles.scanTableCard}`}>
-      <div className={styles.scanTableHeader}><div><div className="section-kicker">RFID ACTIVITY</div><h2>Live Dashboard</h2></div><TableColumnFilter columns={LIVE_COLUMNS} selected={visibleColumns} onChange={setVisibleColumns} /></div>
-      <LiveVisitTable events={data?.recentEvents || []} visibleColumns={visibleColumns} />
+      <div className={styles.scanTableHeader}><h2>Live Dashboard</h2><div className={styles.liveTableControls}><input type="search" className={styles.liveTableSearch} aria-label="Search live dashboard" placeholder="Search card, vehicle, name or company" value={searchQuery} onChange={event => setSearchQuery(event.target.value)} /><TableColumnFilter columns={LIVE_COLUMNS} selected={visibleColumns} onChange={setVisibleColumns} /></div></div>
+      <LiveVisitTable events={data?.recentEvents || []} visibleColumns={visibleColumns} searchQuery={searchQuery} />
     </section>
   </>;
 }

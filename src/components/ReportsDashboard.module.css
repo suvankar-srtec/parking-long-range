@@ -23,3 +23,10 @@
   .summaryGrid{grid-template-columns:1fr 1fr 1fr}
   .columnMenu{max-width:calc(100vw - 40px)}
 }
+
+/* Compact supervisor reports without splitting words or identifiers. */
+.supervisorReport table{font-size:10px;table-layout:auto}
+.supervisorReport th,.supervisorReport td{padding:9px 4px;line-height:1.4;white-space:nowrap;word-break:normal;overflow-wrap:normal}
+.supervisorReport th{font-size:9px;letter-spacing:0}
+.supervisorReport .inside,.supervisorReport .exited{font-size:10px;padding:2px 4px}
+@media(max-width:1000px){.supervisorReport{overflow-x:auto}.supervisorReport table{min-width:960px}}

@@ -31,3 +31,17 @@ export function pairVisitScans(events: readonly VisitScan[]): VisitRow[] {
   }
   return rows.sort((a, b) => b.latest.createdAt.localeCompare(a.latest.createdAt) || b.latest.id.localeCompare(a.latest.id));
 }
+
+
+export function filterVisitRows(rows: readonly VisitRow[], query: string): readonly VisitRow[] {
+  const search = query.trim().toLowerCase();
+  if (!search) return rows;
+  return rows.filter(row => [row.entry, row.exit, row.latest].some(event => event && [
+    event.cardNo, event.deviceNumber, event.vehicle?.plateNumber, event.vehicle?.ownerName,
+    event.vehicle?.department, event.company?.name, event.personType, event.message,
+    event.action, event.eventType, event.createdAt,
+    new Date(event.createdAt).toLocaleString(),
+    event.code === "0000" ? `${event.action.toLowerCase()} allowed` : "",
+    event.message.toLowerCase() === "owner parking allocation is full" ? "Allocation full" : "",
+  ].some(value => value?.toLowerCase().includes(search))));
+}

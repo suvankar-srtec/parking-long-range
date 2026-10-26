@@ -97,6 +97,7 @@ export default function SupervisorHeadcount({
   showLiveDashboard?: boolean;
   showActivity?: boolean;
 }) {
+  const [searchQuery, setSearchQuery] = useState("");
   const [visibleColumns, setVisibleColumns] = useState<Set<number>>(() => new Set(LIVE_COLUMNS.map((_, index) => index)));
   const [data, setData] = useState<Headcount | null>(null);
   const [error, setError] = useState("");
@@ -239,8 +240,8 @@ export default function SupervisorHeadcount({
     </div> : null}
 
     {showLiveDashboard ? <section className={`portfolio-card ${styles.scanTableCard}`}>
-      <div className={styles.scanTableHeader}><div><div className="section-kicker">RFID ACTIVITY</div><h2>Live Dashboard</h2></div><TableColumnFilter columns={LIVE_COLUMNS} selected={visibleColumns} onChange={setVisibleColumns} /></div>
-      {showActivity ? <LiveVisitTable events={data?.recentEvents || []} visibleColumns={visibleColumns} /> : <p className="muted">RFID activity access is not assigned to this Supervisor.</p>}
+      <div className={styles.scanTableHeader}><h2>Live Dashboard</h2><div className={styles.liveTableControls}><input type="search" className={styles.liveTableSearch} aria-label="Search live dashboard" placeholder="Search card, vehicle, name or company" value={searchQuery} onChange={event => setSearchQuery(event.target.value)} /><TableColumnFilter columns={LIVE_COLUMNS} selected={visibleColumns} onChange={setVisibleColumns} /></div></div>
+      {showActivity ? <LiveVisitTable events={data?.recentEvents || []} visibleColumns={visibleColumns} searchQuery={searchQuery} /> : <p className="muted">RFID activity access is not assigned to this Supervisor.</p>}
     </section> : null}
   </>;
 }

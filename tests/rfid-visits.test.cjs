@@ -27,3 +27,19 @@ test('keeps unmatched exit visible and deduplicates retried event IDs', () => {
  const out=scan('out','EXIT','10:00'); const rows=pairVisitScans([out,out]);
  assert.equal(rows.length,1);assert.equal(rows[0].entry,null);assert.equal(rows[0].exit.id,'out');
 });
+
+
+test('instant search matches either side of a complete visit without splitting it', () => {
+ const rows=pairVisitScans([scan('in','ENTRY','10:00',{deviceNumber:'80M236-A'}),scan('out','EXIT','10:01',{deviceNumber:'80M236-B',eventType:'Offline'})]);
+ const { filterVisitRows }=moduleResult.exports;
+ for(const query of ['80m236-a','  OFFLINE  ','123','exit allowed']) {
+  const matches=filterVisitRows(rows,query);
+  assert.equal(matches.length,1);assert.equal(matches[0].entry.id,'in');assert.equal(matches[0].exit.id,'out');
+ }
+ assert.equal(filterVisitRows(rows,'missing').length,0);
+ assert.equal(filterVisitRows(rows,'   '),rows);
+});
+test('search matches employee, vehicle, company and shortened denial text', () => {
+ const rows=pairVisitScans([scan('denied','DENIED','10:00',{code:'0001',message:'Owner Parking allocation is full',vehicle:{plateNumber:'WB1234',ownerName:'Alex',department:'Operations'},company:{name:'Digiraptek'}})]);
+ for(const query of ['alex','wb1234','operations','digiraptek','allocation full'])assert.equal(moduleResult.exports.filterVisitRows(rows,query).length,1);
+});
