@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { createPortal } from "react-dom";
+import styles from "./AdminCredentialsPopup.module.css";
 import { requestJson } from "@/lib/client-request";
 import { useFeedback, useMutation } from "@/components/FeedbackProvider";
 import { ActionButton } from "@/components/LoadingIndicator";
@@ -14,11 +16,21 @@ type Credentials = {
 
 export default function AdminCredentialsPopup() {
   const [open, setOpen] = useState(false);
+  const dialog = useRef<HTMLElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
   const [data, setData] = useState<Credentials | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const { notify } = useFeedback();
   const { pending, execute } = useMutation();
+
+  useEffect(() => {
+    if (!open) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    dialog.current?.focus();
+    return () => { document.body.style.overflow = previousOverflow; trigger.current?.focus(); };
+  }, [open]);
 
   async function show() {
     setOpen(true);
@@ -40,7 +52,8 @@ export default function AdminCredentialsPopup() {
   function updatePassword(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!data || pending) return;
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     const password = String(form.get("password") ?? "");
     if (!password.trim()) {
       notify("Enter a new Admin password.", "error");
@@ -54,66 +67,45 @@ export default function AdminCredentialsPopup() {
         { password },
       );
       notify(result.message || "Admin password updated.");
-      event.currentTarget.reset();
+      formElement.reset();
+      dialog.current?.focus();
     });
   }
 
   return <>
-    <button type="button" className="sidebar-role-pill sidebar-role-button" onClick={() => void show()}>
-      ADMIN
-    </button>
-
-    {open ? <div className="modal-backdrop" onMouseDown={(event) => {
+    <button ref={trigger} type="button" className="sidebar-role-pill sidebar-role-button" onClick={() => void show()}>ADMIN</button>
+    {open ? createPortal(<div className={styles.backdrop} onMouseDown={event => {
       if (event.target === event.currentTarget && !pending) setOpen(false);
+    }} onKeyDown={event => {
+      if (event.key === "Escape" && !pending) { event.preventDefault(); setOpen(false); }
+      if (event.key === "Tab") {
+        const controls = Array.from(dialog.current?.querySelectorAll<HTMLElement>('button:not(:disabled),input:not(:disabled),[tabindex="0"]') || []);
+        const first = controls[0], last = controls.at(-1);
+        if (!first) { event.preventDefault(); return; }
+        if (event.shiftKey && (document.activeElement === first || document.activeElement === dialog.current)) { event.preventDefault(); last?.focus(); }
+        else if (!event.shiftKey && (document.activeElement === last || document.activeElement === dialog.current)) { event.preventDefault(); first.focus(); }
+      }
     }}>
-      <section className="modal-card admin-credentials-modal" role="dialog" aria-modal="true" aria-labelledby="admin-credentials-title">
-        <div className="modal-head">
-          <div>
-            <h2 id="admin-credentials-title">Admin credentials</h2>
-          </div>
-          <button type="button" className="modal-close" aria-label="Close" disabled={pending} onClick={() => setOpen(false)}>×</button>
+      <section ref={dialog} tabIndex={-1} className={styles.dialog} role="dialog" aria-modal="true" aria-labelledby="admin-credentials-title">
+        <header className={styles.header}>
+          <div><span className={styles.eyebrow}>ADMIN ACCOUNT</span><h2 id="admin-credentials-title">Admin credentials</h2></div>
+          <button type="button" className={styles.close} aria-label="Close" disabled={pending} onClick={() => setOpen(false)}>&times;</button>
+        </header>
+        <div className={styles.body}>
+          {loading ? <p role="status">Loading credentials...</p> : null}
+          {error ? <div role="alert" className="parking-feedback parking-feedback-error">{error}</div> : null}
+          {data ? <>
+            <dl className={styles.details}><div><dt>Admin User ID</dt><dd>{data.userId}</dd></div><div><dt>Building</dt><dd>{data.buildingName}</dd></div></dl>
+            <form className={styles.form} onSubmit={updatePassword} aria-busy={pending}>
+              <PasswordInput label="New password" name="password" placeholder="Enter new password" autoComplete="new-password" required disabled={pending} />
+              <footer className={styles.actions}>
+                <button type="button" className={styles.cancel} disabled={pending} onClick={() => setOpen(false)}>Cancel</button>
+                <ActionButton type="submit" className={styles.save} pending={pending} pendingText="Updating...">Update password</ActionButton>
+              </footer>
+            </form>
+          </> : null}
         </div>
-        <div className="modal-divider" />
-
-        {loading ? <p>Loading credentials…</p> : null}
-        {error ? <div className="parking-feedback parking-feedback-error">{error}</div> : null}
-
-        {data ? <>
-          <div className="admin-credentials-grid">
-            <div><span>Admin User ID</span><strong>{data.userId}</strong></div>
-            <div><span>Building</span><strong>{data.buildingName}</strong></div>
-          </div>
-          <div className="admin-password-status">
-            <span>Current password</span>
-            <strong>••••••••</strong>
-          </div>
-          <form className="admin-password-form" onSubmit={updatePassword}>
-            <PasswordInput label="Change password" name="password" autoComplete="new-password" required disabled={pending} />
-            <ActionButton type="submit" className="primary-button" pending={pending} pendingText="Updating…">
-              Update password
-            </ActionButton>
-          </form>
-        </> : null}
       </section>
-    </div> : null}
-
-    <style>{`
-      .sidebar-role-button{border:0;cursor:pointer;text-align:left}
-      .sidebar-role-button:hover{filter:brightness(.96)}
-      .admin-credentials-modal{width:min(620px,96vw);padding:22px}
-      .admin-credentials-modal .modal-head{align-items:center}
-      .admin-credentials-modal .modal-head h2{margin:0;font-size:24px}
-      .admin-credentials-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-      .admin-credentials-grid>div{padding:14px 15px;border:1px solid #d7e0db;border-radius:11px;background:#f8faf9}
-      .admin-credentials-grid span,.admin-password-status span{display:block;color:#6b7770;font-size:12px;font-weight:800}
-      .admin-credentials-grid strong{display:block;margin-top:7px;color:#1769c2;font-size:16px}
-      .admin-password-status{margin-top:12px;padding:14px 15px;border:1px solid #ddd5e5;border-radius:11px;background:#f7fbff}
-      .admin-password-status strong{display:block;margin-top:7px;color:#1769c2;font-size:18px;letter-spacing:3px}
-      .admin-password-form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:end;margin-top:12px}
-      .admin-password-form .password-field{min-width:0}
-      .admin-password-form .password-input-wrap input{height:42px}
-      .admin-password-form .primary-button{min-height:42px;white-space:nowrap}
-      @media(max-width:560px){.admin-credentials-grid,.admin-password-form{grid-template-columns:1fr}.admin-password-form .primary-button{width:100%}}
-    `}</style>
+    </div>, document.body) : null}
   </>;
 }
