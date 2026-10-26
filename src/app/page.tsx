@@ -54,7 +54,7 @@ export default function LoginPage() {
       <div className={styles.formPanel}>
         <div className={styles.formBrand}><span className={styles.formMark} aria-hidden="true">S</span><div><strong>SRTEC</strong><span>Access Control</span></div></div>
         <form className={styles.form} noValidate aria-busy={pending} onSubmit={submit}>
-          <div className={styles.floatingField}><input id="login-user-id" name="userId" placeholder=" " required autoComplete="username" autoCapitalize="none" spellCheck={false} disabled={pending} /><label htmlFor="login-user-id">User ID</label></div>
+          <div className={styles.floatingField}><input id="login-user-id" name="userId" placeholder=" " required autoComplete="username" autoCapitalize="none" spellCheck={false} disabled={pending} /><label htmlFor="login-user-id">User ID</label><fieldset className={styles.fieldOutline} aria-hidden="true"><legend><span>User ID</span></legend></fieldset></div>
           <PasswordInput floatingLabel label="Password" name="password" required autoComplete="current-password" disabled={pending} />
           <ActionButton type="submit" className={styles.submit} pending={pending} pendingText="Signing in...">Sign in <span aria-hidden="true">&rarr;</span></ActionButton>
         </form>

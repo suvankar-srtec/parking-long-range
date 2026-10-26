@@ -50,6 +50,16 @@
 .floatingField{position:relative}
 .form{gap:24px}
 .form .floatingField>label,.form :global(.floating-password-field) :global(.password-input-wrap)>label{position:absolute;top:50%;left:14px;display:block;margin:0;padding:0;max-width:calc(100% - 60px);color:#7d8da1;font-size:16px;font-weight:400;line-height:1;transform:translateY(-50%);transform-origin:left bottom;background:transparent;cursor:text;transition:top .24s cubic-bezier(.2,.8,.2,1),transform .24s cubic-bezier(.2,.8,.2,1),color .24s ease}
-.form .floatingField:focus-within>label,.form .floatingField>input:not(:placeholder-shown)+label,.form :global(.floating-password-field):focus-within :global(.password-input-wrap)>label,.form :global(.floating-password-field) input:not(:placeholder-shown)+label{top:0;transform:translateY(calc(-100% - 4px)) scale(.875);color:#2166af}
-.form .floatingField>input:autofill+label,.form :global(.floating-password-field) input:autofill+label{top:0;transform:translateY(calc(-100% - 4px)) scale(.875);color:#2166af}
+.form .floatingField:focus-within>label,.form .floatingField>input:not(:placeholder-shown)+label,.form :global(.floating-password-field):focus-within :global(.password-input-wrap)>label,.form :global(.floating-password-field) input:not(:placeholder-shown)+label{top:0;transform:translateY(-50%) scale(.875);color:#2166af}
+.form .floatingField>input:autofill+label,.form :global(.floating-password-field) input:autofill+label{top:0;transform:translateY(-50%) scale(.875);color:#2166af}
 @media(prefers-reduced-motion:reduce){.form .floatingField>label,.form :global(.floating-password-field) :global(.password-input-wrap)>label{transition:none}}
+
+.form .floatingField>input,.form :global(.floating-password-field) input{border-color:transparent!important}
+.form .floatingField>label,.form :global(.floating-password-field) :global(.password-input-wrap)>label{z-index:2}
+.fieldOutline,.form :global(.floating-field-outline){position:absolute;pointer-events:none;inset:-7px 0 0;margin:0;padding:0 9px;border:1px solid #d2dce8;border-radius:9px;min-width:0;transition:border-color .24s ease}
+.fieldOutline legend,.form :global(.floating-field-outline) legend{height:14px;max-width:0;padding:0;overflow:hidden;white-space:nowrap;font-size:14px;line-height:14px;visibility:hidden;transition:max-width .24s cubic-bezier(.2,.8,.2,1)}
+.fieldOutline legend span,.form :global(.floating-field-outline) legend span{padding:0 5px}
+.floatingField:focus-within .fieldOutline,.form :global(.floating-password-field):focus-within :global(.floating-field-outline){border-color:#397fc7}
+.floatingField:hover .fieldOutline,.form :global(.floating-password-field):hover :global(.floating-field-outline){border-color:#a7bcd2}
+.floatingField:focus-within .fieldOutline legend,.floatingField>input:not(:placeholder-shown)~.fieldOutline legend,.form :global(.floating-password-field):focus-within :global(.floating-field-outline) legend,.form :global(.floating-password-field) input:not(:placeholder-shown)~:global(.floating-field-outline) legend{max-width:100%}
+@media(prefers-reduced-motion:reduce){.fieldOutline,.fieldOutline legend,.form :global(.floating-field-outline),.form :global(.floating-field-outline) legend{transition:none}}

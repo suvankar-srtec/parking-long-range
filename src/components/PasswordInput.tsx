@@ -14,7 +14,7 @@ export default function PasswordInput({ label, id, disabled, floatingLabel = fal
     {!floatingLabel && <label htmlFor={inputId}>{label}</label>}
     <div className="password-input-wrap">
       <input {...props} id={inputId} type={visible ? "text" : "password"} disabled={disabled} placeholder={floatingLabel ? " " : props.placeholder} />
-      {floatingLabel && <label htmlFor={inputId}>{label}</label>}
+      {floatingLabel && <><label htmlFor={inputId}>{label}</label><fieldset className="floating-field-outline" aria-hidden="true"><legend><span>{label}</span></legend></fieldset></>}
       <button type="button" className="password-toggle" aria-label={action} title={action}
         aria-controls={inputId} aria-pressed={visible} disabled={disabled}
         onMouseDown={(event) => event.preventDefault()} onClick={() => setVisible((value) => !value)}>
