@@ -2,18 +2,19 @@
 
 import { useId, useState, type InputHTMLAttributes } from "react";
 
-type PasswordInputProps = Omit<InputHTMLAttributes<HTMLInputElement>, "type"> & { label: string };
+type PasswordInputProps = Omit<InputHTMLAttributes<HTMLInputElement>, "type"> & { label: string; floatingLabel?: boolean };
 
-export default function PasswordInput({ label, id, disabled, ...props }: PasswordInputProps) {
+export default function PasswordInput({ label, id, disabled, floatingLabel = false, ...props }: PasswordInputProps) {
   const generatedId = useId();
   const inputId = id || generatedId;
   const [visible, setVisible] = useState(false);
   const action = visible ? "Hide password" : "Show password";
 
-  return <div className="password-field">
-    <label htmlFor={inputId}>{label}</label>
+  return <div className={`password-field${floatingLabel ? " floating-password-field" : ""}`}>
+    {!floatingLabel && <label htmlFor={inputId}>{label}</label>}
     <div className="password-input-wrap">
-      <input {...props} id={inputId} type={visible ? "text" : "password"} disabled={disabled} />
+      <input {...props} id={inputId} type={visible ? "text" : "password"} disabled={disabled} placeholder={floatingLabel ? " " : props.placeholder} />
+      {floatingLabel && <label htmlFor={inputId}>{label}</label>}
       <button type="button" className="password-toggle" aria-label={action} title={action}
         aria-controls={inputId} aria-pressed={visible} disabled={disabled}
         onMouseDown={(event) => event.preventDefault()} onClick={() => setVisible((value) => !value)}>

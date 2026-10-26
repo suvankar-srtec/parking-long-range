@@ -54,8 +54,8 @@ export default function LoginPage() {
       <div className={styles.formPanel}>
         <div className={styles.formBrand}><span className={styles.formMark} aria-hidden="true">S</span><div><strong>SRTEC</strong><span>Access Control</span></div></div>
         <form className={styles.form} noValidate aria-busy={pending} onSubmit={submit}>
-          <label>User ID<input name="userId" placeholder="User ID" required autoComplete="username" autoCapitalize="none" spellCheck={false} disabled={pending} /></label>
-          <PasswordInput label="Password" name="password" placeholder="Password" required autoComplete="current-password" disabled={pending} />
+          <div className={styles.floatingField}><input id="login-user-id" name="userId" placeholder=" " required autoComplete="username" autoCapitalize="none" spellCheck={false} disabled={pending} /><label htmlFor="login-user-id">User ID</label></div>
+          <PasswordInput floatingLabel label="Password" name="password" required autoComplete="current-password" disabled={pending} />
           <ActionButton type="submit" className={styles.submit} pending={pending} pendingText="Signing in...">Sign in <span aria-hidden="true">&rarr;</span></ActionButton>
         </form>
         <div className={styles.formFooter}><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><rect x="5" y="10" width="14" height="11" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></svg>Authorized personnel only</div>
