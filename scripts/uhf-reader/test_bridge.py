@@ -28,6 +28,15 @@ class BridgeTests(unittest.TestCase):
             self.assertFalse(presence.observe("E20001", "ACCESS", second))
         self.assertTrue(presence.observe("E20001", "ACCESS", 19))
 
+    def test_reversed_physical_outputs_map_entry_and_exit_correctly(self):
+        with tempfile.TemporaryDirectory() as directory:
+            bridge = Bridge({"app_url": "http://localhost:3000", "reader_token": "synthetic", "device_number": "UHF-001122334455", "relay_claims": directory + "/claims.sqlite", "controller": {"host": "192.168.0.236", "serial": "80M236", "username": "test", "password": "test", "relay_map": [1, 0]}})
+            with patch("bridge.urllib.request.urlopen", return_value=MagicMock()) as command:
+                for index, action in enumerate(("ENTRY", "EXIT")):
+                    result = {"gateAllowed": True, "requestId": "nonce", "expiresAt": time.time()*1000+2000, "eventId": "event-"+action, "relay": {"serial": "80M236", "index": index}, "action": action}
+                    self.assertTrue(bridge.operate(result, "nonce"))
+                    self.assertIn("door="+str(1-index), command.call_args.args[0].full_url)
+
     def test_held_tag_submits_only_once_per_capture(self):
         p = Presence()
         self.assertTrue(p.observe("E20001", "capture-1", 0))

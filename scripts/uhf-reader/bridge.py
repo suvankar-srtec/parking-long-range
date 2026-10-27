@@ -77,6 +77,10 @@ class Bridge:
                 or relay["index"] not in (0, 1) or result.get("action") not in ("ENTRY", "EXIT")
                 or not result.get("eventId")):
             raise ValueError("Invalid or expired relay authorization")
+        relay_map = target.get("relay_map", [0, 1])
+        if not isinstance(relay_map, list) or len(relay_map) != 2 or any(type(value) is not int for value in relay_map) or sorted(relay_map) != [0, 1]:
+            raise ValueError("Controller relay_map must contain outputs 0 and 1 once each")
+        physical_output = relay_map[relay["index"]]
         address = ipaddress.ip_address(target["host"])
         if not address.is_private:
             raise ValueError("Controller must have a private LAN address")
@@ -88,11 +92,11 @@ class Bridge:
         if not inserted:
             return False
         credentials = base64.b64encode((target["username"] + ":" + target["password"]).encode()).decode()
-        request = urllib.request.Request("http://" + str(address) + "/cdor.cgi?open=1&door=" + str(relay["index"]),
+        request = urllib.request.Request("http://" + str(address) + "/cdor.cgi?open=1&door=" + str(physical_output),
                                          headers={"Authorization": "Basic " + credentials})
         with urllib.request.urlopen(request, timeout=2) as response:
             response.read(4096)
-        logging.info("Authorized %s relay command sent", result["action"])
+        logging.info("Authorized %s relay command sent to output %s", result["action"], physical_output)
         return True
 
     def session(self, seconds=None):
