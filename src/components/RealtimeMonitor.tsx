@@ -110,8 +110,9 @@ export default function RealtimeMonitor({
 
     async function poll() {
       if (stopped) return;
+      const started = Date.now();
       await load();
-      if (!stopped) pollTimer = window.setTimeout(poll, 5000);
+      if (!stopped) pollTimer = window.setTimeout(poll, Math.max(250, 2000 - (Date.now() - started)));
     }
 
     const onVisibility = () => {
@@ -139,7 +140,7 @@ export default function RealtimeMonitor({
         <div>
           <div className="section-kicker">FILTER REALTIME DATA</div>
           <h2>Realtime monitor scope</h2>
-          <p>Select a building and optionally a company. Data refreshes automatically every 5 seconds.</p>
+          <p>Select a building and optionally a company. Data refreshes automatically.</p>
         </div>
       </div>
       <div className="portfolio-divider" />

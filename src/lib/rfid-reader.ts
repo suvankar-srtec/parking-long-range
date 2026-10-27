@@ -1,4 +1,4 @@
-export type ParsedRfidReaderMessage = { decodedResult: string; deviceNumber: string };
+export type ParsedRfidReaderMessage = { decodedResult: string; deviceNumber: string; registrationSessionId?: string; relayControllerSerial?: string; expectedMode?: string };
 export const READER_MODES = ["UNASSIGNED", "REGISTER", "ENTRY", "EXIT", "ENTRY_EXIT"] as const;
 export const SCAN_DEBOUNCE_MS = 1000;
 export function normalizeCard(value: string) { return value.trim().toUpperCase(); }

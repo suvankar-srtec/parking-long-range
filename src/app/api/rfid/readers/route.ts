@@ -212,14 +212,14 @@ export async function POST(request: Request) {
     }
 
     // Cloud C has software-controlled purposes and does not use setup QR images.
-    if (body?.action === "configureCloud") {
+    if (body?.action === "configureCloud" || body?.action === "configureSoftware") {
       const deviceNumber = String(body?.deviceNumber ?? "").trim();
       const mode = String(body?.mode ?? "");
       if (!["REGISTER", "ENTRY", "EXIT", "ENTRY_EXIT"].includes(mode)) throw new ParkingError("Select Registration, Entry, Exit, or Entry / Exit.");
       const result = await prisma.$transaction(async (tx) => {
         await lockRfid(tx);
         const existing = await tx.rfidReader.findUnique({ where: { deviceNumber } });
-        if (!existing || existing.readerProtocol !== "CLOUD_C") throw new ParkingError("Cloud C reader not found.", 404);
+        if (!existing || !["CLOUD_C", "UHF_MM"].includes(existing.readerProtocol)) throw new ParkingError("Software-configurable reader not found.", 404);
         if (!existing.buildingId) throw new ParkingError("Allot this reader to a building first.");
         if (user.role === "SUPER_ADMIN") {
           const building = await tx.building.findUnique({ where: { id: existing.buildingId } });
@@ -232,7 +232,7 @@ export async function POST(request: Request) {
         }
         return tx.rfidReader.update({ where: { id: existing.id }, data: { mode, enabled: true } });
       }, RFID_TRANSACTION);
-      return NextResponse.json({ ok: true, reader: readerSummary(result), message: "Cloud C reader configured and enabled." });
+      return NextResponse.json({ ok: true, reader: readerSummary(result), message: "Reader configured and enabled." });
     }
 
     if (user.role !== "BUILDING_ADMIN") {

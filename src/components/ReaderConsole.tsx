@@ -55,6 +55,8 @@ function readQrImage(file: File) {
   });
 }
 
+function softwareReader(reader: Reader) { return reader.readerProtocol === "CLOUD_C" || reader.readerProtocol === "UHF_MM"; }
+
 function normalizedMode(mode: string) {
   if (mode === "REGISTER" || mode === "ENTRY" || mode === "EXIT" || mode === "ENTRY_EXIT") return mode;
   return "UNASSIGNED";
@@ -170,7 +172,7 @@ export default function ReaderConsole({ compact = false }: { compact?: boolean }
 
   function openConfigure(reader: Reader) {
     setEditing(reader);
-    setEditingMode(reader.readerProtocol === "CLOUD_C" ? normalizedMode(reader.mode) : normalizedMode(reader.mode) === "REGISTER" ? "REGISTER" : "ENTRY_EXIT");
+    setEditingMode(softwareReader(reader) ? normalizedMode(reader.mode) : normalizedMode(reader.mode) === "REGISTER" ? "REGISTER" : "ENTRY_EXIT");
     setRegistrationQr("");
     setEntryExitQr("");
   }
@@ -205,7 +207,7 @@ export default function ReaderConsole({ compact = false }: { compact?: boolean }
     event.preventDefault();
     void execute(async () => {
       const result = await requestJson("/api/rfid/readers", "POST", {
-        ...(editing!.readerProtocol === "CLOUD_C" ? { action: "configureCloud" } : {}),
+        ...(softwareReader(editing!) ? { action: "configureSoftware" } : {}),
         deviceNumber: editing!.deviceNumber,
         mode: editingMode,
         ...(registrationQr ? { registrationQrData: registrationQr } : {}),
@@ -233,7 +235,7 @@ export default function ReaderConsole({ compact = false }: { compact?: boolean }
             buildingId: form.get("buildingId"),
           })
         : await requestJson("/api/rfid/readers", "POST", {
-            ...(selectedReader.readerProtocol === "CLOUD_C" ? { action: "configureCloud" } : {}),
+            ...(softwareReader(selectedReader) ? { action: "configureSoftware" } : {}),
             deviceNumber: selectedReader.deviceNumber,
             mode: setupMode,
             ...(registrationQr ? { registrationQrData: registrationQr } : {}),
@@ -284,14 +286,15 @@ export default function ReaderConsole({ compact = false }: { compact?: boolean }
 
           const state = error ? { tone: "unknown", label: "Status unavailable" } : readerStatus(reader, Date.now() + serverClockOffset);
           return <article className="reader-card" key={reader.id}>
+            {reader.readerProtocol === "UHF_MM" ? <p className="muted">UHF network reader - Software-controlled purpose</p> : null}
             <h3>{reader.readerProtocol === "CLOUD_C" && /-[AB]$/.test(reader.deviceNumber) ? `Reader ${reader.deviceNumber.endsWith("-A") ? "A (IN/WG1)" : "B (OUT/WG2)"}` : reader.name}</h3>
             <p>{reader.deviceNumber} · {reader.readerIp || "IP not detected"}</p>
             <div className="reader-line"><i className={"reader-dot " + state.tone} />{state.label}</div>
             <p>{data!.buildings.find((building) => building.id === reader.buildingId)?.name || "Building not assigned"} · {modeLabel(normalizedMode(reader.mode))}</p>
             <p className="muted">{reader.enabled ? "Approved" : "Disabled"} · Last contact: {reader.lastSeenAt ? new Date(reader.lastSeenAt).toLocaleString() : "None"}</p>
-            {reader.readerProtocol === "CLOUD_C" ? null : <p className="muted">Setup QR: {reader.hasRegistrationQr ? "Registration ✓" : "Registration missing"} · {reader.hasEntryExitQr ? "Entry / Exit ✓" : "Entry / Exit missing"}</p>}
-            {(data!.canConfigureReaders || data!.canRemoveReaders || (data!.canAssignReaders && reader.readerProtocol === "CLOUD_C")) && <div className="reader-card-actions">
-              {(data!.canConfigureReaders || (data!.canAssignReaders && reader.readerProtocol === "CLOUD_C")) ? <button className="secondary-button" onClick={() => openConfigure(reader)}>Configure purpose</button> : null}
+            {softwareReader(reader) ? null : <p className="muted">Setup QR: {reader.hasRegistrationQr ? "Registration ✓" : "Registration missing"} · {reader.hasEntryExitQr ? "Entry / Exit ✓" : "Entry / Exit missing"}</p>}
+            {(data!.canConfigureReaders || data!.canRemoveReaders || (data!.canAssignReaders && softwareReader(reader))) && <div className="reader-card-actions">
+              {(data!.canConfigureReaders || (data!.canAssignReaders && softwareReader(reader))) ? <button className="secondary-button" onClick={() => openConfigure(reader)}>Configure purpose</button> : null}
               {data!.canRemoveReaders ? <button className="secondary-button" disabled={pending} onClick={() => removeReader(reader)}>Remove reader</button> : null}
             </div>}
           </article>;
@@ -360,7 +363,7 @@ export default function ReaderConsole({ compact = false }: { compact?: boolean }
             {data.availableReaders.map((reader) => {
               const state = readerStatus(reader, Date.now() + serverClockOffset);
               const selected = selectedReader?.id === reader.id;
-              return <button type="button" className={`reader-selector-row${selected ? " selected" : ""}`} key={reader.id} onClick={() => setSelectedReader(reader)}>
+              return <button type="button" className={`reader-selector-row${selected ? " selected" : ""}`} key={reader.id} onClick={() => { setSelectedReader(reader); setSetupMode(reader.readerProtocol === "UHF_MM" ? "REGISTER" : "ENTRY_EXIT"); }}>
                 <div className="reader-selector-main">
                   <div className="reader-selector-title">
                     <i className={"reader-dot " + state.tone} />
@@ -403,12 +406,12 @@ export default function ReaderConsole({ compact = false }: { compact?: boolean }
               <label>Building<input value={selectedReader.building?.name || data?.buildings.find((building) => building.id === selectedReader.buildingId)?.name || "Assigned building"} readOnly /></label>
               <label>Purpose<select value={setupMode} onChange={(event) => setSetupMode(event.target.value)}>
                 <option value="REGISTER">Registration</option>
-                {selectedReader.readerProtocol === "CLOUD_C" && <><option value="ENTRY">Entry</option><option value="EXIT">Exit</option></>}
+                {softwareReader(selectedReader) && <><option value="ENTRY">Entry</option><option value="EXIT">Exit</option></>}
                 <option value="ENTRY_EXIT">Entry / Exit</option>
               </select></label>
             </fieldset>
             <div className="reader-setup-body reader-admin-setup-body">
-              {selectedReader.readerProtocol !== "CLOUD_C" && <label className="reader-qr-upload">
+              {!softwareReader(selectedReader) && <label className="reader-qr-upload">
                 <span>{setupMode === "REGISTER" ? "Registration QR" : "Entry / Exit QR"}</span>
                 <div className="reader-upload-row">
                   <input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => void pickQr(event, setupMode === "REGISTER" ? "registration" : "entryExit")} />
@@ -446,16 +449,16 @@ export default function ReaderConsole({ compact = false }: { compact?: boolean }
             <label>Building<input value={data?.buildings.find((building) => building.id === editing.buildingId)?.name || "Assigned building"} readOnly /></label>
             <label>Purpose<select name="mode" value={editingMode} onChange={(event) => setEditingMode(event.target.value)}>
               <option value="REGISTER">Registration</option>
-              {editing.readerProtocol === "CLOUD_C" && <><option value="ENTRY">Entry</option><option value="EXIT">Exit</option></>}
+              {softwareReader(editing) && <><option value="ENTRY">Entry</option><option value="EXIT">Exit</option></>}
               <option value="ENTRY_EXIT">Entry / Exit</option>
             </select></label>
-            {editing.readerProtocol !== "CLOUD_C" && <label className="reader-config-upload">
+            {!softwareReader(editing) && <label className="reader-config-upload">
               {editingMode === "REGISTER" ? "Registration QR" : "Entry / Exit QR"}
               <input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => void pickQr(event, editingMode === "REGISTER" ? "registration" : "entryExit")} />
             </label>}
           </fieldset>
 
-          {editing.readerProtocol !== "CLOUD_C" && <div className="reader-qr-preview reader-config-qr">
+          {!softwareReader(editing) && <div className="reader-qr-preview reader-config-qr">
             <div>
               <span className="section-kicker">CONFIGURATION QR</span>
               <strong>{modeLabel(editingMode)}</strong>

@@ -65,6 +65,8 @@ export async function processReaderScan(input: ParsedRfidReaderMessage, transpor
       },
     });
 
+    let relayTargets: { ENTRY?: { serial: string; index: number }; EXIT?: { serial: string; index: number } } = {};
+
     async function record(
       code: string,
       message: string,
@@ -75,7 +77,7 @@ export async function processReaderScan(input: ParsedRfidReaderMessage, transpor
       scannedVisitorId?: string,
     ) {
       const readerCode = code === READER_SUCCESS_CODE ? READER_SUCCESS_CODE : READER_NO_SUCCESS_CODE;
-      await tx.rfidEvent.create({ data: {
+      const recordedEvent = await tx.rfidEvent.create({ data: {
         readerId: reader.id,
         buildingId: reader.buildingId,
         deviceNumber: reader.deviceNumber,
@@ -88,10 +90,11 @@ export async function processReaderScan(input: ParsedRfidReaderMessage, transpor
         ownerVehicleId,
         visitorId: scannedVisitorId,
       } });
-      return { code: readerCode, message };
+      return { code: readerCode, message, action, eventId: recordedEvent?.id, relay: readerCode === "0000" ? relayTargets[action as "ENTRY" | "EXIT"] : undefined };
     }
 
     if (!reader.enabled || !reader.buildingId) return record("1004", "Reader must be assigned to a building and enabled.");
+    if (input.expectedMode && input.expectedMode !== reader.mode) return record(READER_NO_SUCCESS_CODE, "Reader purpose changed; present the tag again.");
     const previousScan = await tx.rfidEvent.findFirst({ where: {
       readerId: reader.id, code: { in: ["0000", "0001"] }, action: { not: "DUPLICATE" },
       createdAt: { gt: new Date(now.getTime() - SCAN_DEBOUNCE_MS) },
@@ -117,6 +120,7 @@ export async function processReaderScan(input: ParsedRfidReaderMessage, transpor
         where: { readerId: reader.id, status: { in: ["WAITING", "CAPTURED"] } },
       });
       if (!enrollment) return record("1005", "Reader is in register mode.");
+      if (input.registrationSessionId && input.registrationSessionId !== enrollment.id) return record(READER_NO_SUCCESS_CODE, "Registration session changed; present the tag again.");
 
       if (enrollment.ownerParking) {
         if (enrollment.buildingId !== reader.buildingId) return record("1004", "Registration belongs to another building.");
@@ -331,9 +335,28 @@ export async function processReaderScan(input: ParsedRfidReaderMessage, transpor
       select: { gateNumber: true, direction: true },
       orderBy: { gateNumber: "asc" },
     });
-    const allottedGate = buildingGates
+    let allottedGate = buildingGates
       .map((gate) => ({ gate, config: parseGateConfig(gate.direction) }))
       .find(({ config }) => config.entryReaderId === reader.id || config.exitReaderId === reader.id);
+    if (reader.readerProtocol === "UHF_MM" && input.relayControllerSerial && /^[A-Za-z0-9_-]{1,60}$/.test(input.relayControllerSerial)) {
+      const serial = input.relayControllerSerial;
+      const outputs = await tx.rfidReader.findMany({ where: { deviceNumber: { in: [serial + "-A", serial + "-B"] }, buildingId: reader.buildingId, enabled: true, readerProtocol: "CLOUD_C" }, select: { id: true, deviceNumber: true } });
+      const outputFor = (id: string | null) => outputs.find(output => output.id === id);
+      const candidates = buildingGates.map(gate => ({ gate, config: parseGateConfig(gate.direction) }));
+      // A network-only reader can occupy a lane while the opposite Cloud+ output
+      // identifies the controller. Its relay is the other output on that controller.
+      allottedGate = candidates.find(({ config }) => config.direction === "ENTRY_EXIT" && (
+        (config.entryReaderId === reader.id && !!outputFor(config.exitReaderId)) ||
+        (config.exitReaderId === reader.id && !!outputFor(config.entryReaderId))
+      )) || candidates.find(({ config }) => config.direction === "ENTRY_EXIT" && !!outputFor(config.entryReaderId) && !!outputFor(config.exitReaderId) && config.entryReaderId !== config.exitReaderId);
+      if (allottedGate) {
+        const entry = outputFor(allottedGate.config.entryReaderId);
+        const exit = outputFor(allottedGate.config.exitReaderId);
+        const entryIndex = entry ? (entry.deviceNumber.endsWith("-A") ? 0 : 1) : (exit!.deviceNumber.endsWith("-A") ? 1 : 0);
+        const exitIndex = exit ? (exit.deviceNumber.endsWith("-A") ? 0 : 1) : (entry!.deviceNumber.endsWith("-A") ? 1 : 0);
+        relayTargets = { ENTRY: { serial, index: entryIndex }, EXIT: { serial, index: exitIndex } };
+      }
+    }
     if (!allottedGate) {
       return record(
         READER_NO_SUCCESS_CODE,
@@ -345,7 +368,9 @@ export async function processReaderScan(input: ParsedRfidReaderMessage, transpor
       );
     }
 
-    const effectiveMode = gateReaderDirection(allottedGate.config, reader.id);
+    // A lane assignment is authoritative, including when a UHF reader has a general Entry/Exit purpose.
+    const assignedDirection = gateReaderDirection(allottedGate.config, reader.id);
+    const effectiveMode = reader.readerProtocol === "UHF_MM" && input.relayControllerSerial && !["ENTRY", "EXIT"].includes(assignedDirection) ? reader.mode : assignedDirection;
       if (!["ENTRY_EXIT", "ENTRY", "EXIT"].includes(effectiveMode)) {
       return record(
         READER_NO_SUCCESS_CODE,
