@@ -1,3 +1,4 @@
+import dashboardStyles from "./dashboard.module.css";
 import SignOutButton from "@/components/SignOutButton";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
@@ -168,6 +169,8 @@ export default async function DashboardPage() {
     </section></main>;
   }
 
+  const assignedBuilding = user.buildingId ? await prisma.building.findUnique({ where: { id: user.buildingId }, select: { name: true } }) : null;
+
   const showTotalOnSite = hasPermission(user, "supervisor.totalOnSite");
   const showTotalIn = hasPermission(user, "supervisor.totalIn");
   const showTotalOut = hasPermission(user, "supervisor.totalOut");
@@ -175,7 +178,7 @@ export default async function DashboardPage() {
   const showActivity = hasPermission(user, "supervisor.activity");
 
   return <main className="dashboard-page"><Sidebar role={user.role} permissions={permissions} /><section className="dashboard-main">
-    <header className="topbar"><div><div className="section-kicker">SUPERVISOR</div><h1>Real Time Monitor</h1></div><div className="topbar-right"><div className="summary-card"><span>User ID</span><strong>{user.userId}</strong></div><SignOutButton /></div></header>
+    <header className="topbar"><div><h1 className={dashboardStyles.buildingName}>{assignedBuilding?.name || "Building not assigned"}</h1></div><div className="topbar-right"><div className="summary-card"><span>User ID</span><strong>{user.userId}</strong></div><SignOutButton /></div></header>
     {user.buildingId ? <SupervisorHeadcount showTotalOnSite={showTotalOnSite} showTotalIn={showTotalIn} showTotalOut={showTotalOut} showLiveDashboard={showLiveDashboard} showActivity={showActivity} /> : <AssignmentRequired title="Building not assigned" message="This Supervisor must be assigned to a building before the Real Time Monitor and reports are available." />}
   </section></main>;
 }

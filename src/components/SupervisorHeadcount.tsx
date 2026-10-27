@@ -4,8 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { manualExitResult, scanResultMessage } from "@/lib/rfid-display";
 import { Spinner } from "./LoadingIndicator";
 import { useFeedback, useMutation } from "./FeedbackProvider";
-import TableColumnFilter from "./TableColumnFilter";
 import LiveVisitTable, { VISIT_COLUMNS as LIVE_COLUMNS } from "./LiveVisitTable";
+import MonitorSummary from "./MonitorSummary";
 import styles from "./SupervisorHeadcount.module.css";
 
 
@@ -97,8 +97,7 @@ export default function SupervisorHeadcount({
   showLiveDashboard?: boolean;
   showActivity?: boolean;
 }) {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [visibleColumns, setVisibleColumns] = useState<Set<number>>(() => new Set(LIVE_COLUMNS.map((_, index) => index)));
+  const visibleColumns = useMemo(() => new Set(LIVE_COLUMNS.map((_, index) => index)), []);
   const [data, setData] = useState<Headcount | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -211,16 +210,9 @@ export default function SupervisorHeadcount({
       <div className={styles.popupBody}><span className={styles.popupEyebrow}>LIVE RFID EVENT</span><h3>{popupTitle(popup)}</h3><p>{popup.deviceNumber === "MANUAL" && popup.action === "EXIT" ? manualExitResult(popup.message) : scanResultMessage(popup.message)}</p><div className={styles.popupMeta}><span><strong>Vehicle</strong>{popup.vehicle?.plateNumber || "Unknown"}</span><span><strong>Rider</strong>{popup.vehicle?.ownerName || "Unknown"}</span><span><strong>Company</strong>{popup.company?.name || "-"}</span><span><strong>RFID</strong>{popup.cardNo}</span></div></div>
     </div> : null}
 
-    {metricCount > 0 ? <section className={`portfolio-card ${styles.headcount}`}>
-      <div className={styles.titleRow}><div><div className="section-kicker"><span className={styles.liveDot} />REAL TIME MONITOR</div><h2>Real Time Monitor</h2><p>{data?.buildingName || "Assigned building"} · updates every 3 seconds</p></div><div className={styles.clock}><strong>{clock.toLocaleDateString()}</strong><span>{clock.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</span></div></div>
-      <div className="portfolio-divider" />
-      {error ? <div className={`parking-feedback parking-feedback-error ${styles.error}`}>{error}</div> : null}
-      <div className={styles.totals} style={{ gridTemplateColumns: `repeat(${metricCount}, minmax(0, 1fr))` }}>
-        {showTotalOnSite ? <button type="button" className={`${styles.totalCard} ${styles.onsite} ${styles.clickableTotal}`} onClick={() => setShowActiveCards(true)}><span>Total On Site</span><strong>{data?.totalOnSite ?? 0}</strong><small>Click to view active cards</small></button> : null}
-        {showTotalIn ? <article className={`${styles.totalCard} ${styles.in}`}><span>Total IN</span><strong>{data?.totalIn ?? 0}</strong></article> : null}
-        {showTotalOut ? <article className={`${styles.totalCard} ${styles.out}`}><span>Total OUT</span><strong>{data?.totalOut ?? 0}</strong></article> : null}
-      </div>
-    </section> : null}
+    {metricCount > 0 ? <MonitorSummary buildingName={data?.buildingName || "Assigned building"} clock={clock} error={error}
+      totalOnSite={data?.totalOnSite ?? 0} totalIn={data?.totalIn ?? 0} totalOut={data?.totalOut ?? 0}
+      showTotalOnSite={showTotalOnSite} showTotalIn={showTotalIn} showTotalOut={showTotalOut} onViewActive={() => setShowActiveCards(true)} /> : null}
 
     {showActiveCards ? <div className={styles.activeCardsBackdrop} onMouseDown={(event) => { if (event.target === event.currentTarget) setShowActiveCards(false); }}>
       <section className={styles.activeCardsModal} role="dialog" aria-modal="true" aria-label="Active RFID and visitor QR entries">
@@ -240,8 +232,8 @@ export default function SupervisorHeadcount({
     </div> : null}
 
     {showLiveDashboard ? <section className={`portfolio-card ${styles.scanTableCard}`}>
-      <div className={styles.scanTableHeader}><h2>Live Dashboard</h2><div className={styles.liveTableControls}><input type="search" className={styles.liveTableSearch} aria-label="Search live dashboard" placeholder="Search card, vehicle, name or company" value={searchQuery} onChange={event => setSearchQuery(event.target.value)} /><TableColumnFilter columns={LIVE_COLUMNS} selected={visibleColumns} onChange={setVisibleColumns} /></div></div>
-      {showActivity ? <LiveVisitTable events={data?.recentEvents || []} visibleColumns={visibleColumns} searchQuery={searchQuery} /> : <p className="muted">RFID activity access is not assigned to this Supervisor.</p>}
+      <div className={styles.scanTableHeader}><h2>Live Dashboard</h2></div>
+      {showActivity ? <LiveVisitTable events={data?.recentEvents || []} visibleColumns={visibleColumns} /> : <p className="muted">RFID activity access is not assigned to this Supervisor.</p>}
     </section> : null}
   </>;
 }

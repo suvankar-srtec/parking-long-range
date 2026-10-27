@@ -415,10 +415,20 @@ export default function ReportsDashboard({
       {role === "SUPER_ADMIN" && <label>Building<select value={buildingId} onChange={(event) => { setBuildingId(event.target.value); setCompanyId(""); }}><option value="">All buildings</option>{buildings.map((building) => <option key={building.id} value={building.id}>{building.name}</option>)}</select></label>}
       {role !== "COMPANY_ADMIN" && <label>Company / owner<select value={companyId} onChange={(event) => setCompanyId(event.target.value)}><option value="">All companies</option><option value="__owner__">Building owner</option><option value="__visitor__">Building visitors</option>{allowedCompanies.map((company) => <option key={company.id} value={company.id}>{company.name}</option>)}</select></label>}
       {role === "COMPANY_ADMIN" && <label>Company<select value={companyId} disabled>{companies.map((company) => <option key={company.id} value={company.id}>{company.name}</option>)}</select></label>}
+      <button className={styles.clearButton} type="button" onClick={clearFilters}>Clear filter</button>
+    </section>
+
+    <section className={styles.summaryGrid}>
+      <div><span>Records</span><strong>{filtered.length}</strong></div>
+      <div><span>Currently inside</span><strong>{inside}</strong></div>
+      <div><span>Exited</span><strong>{exited}</strong></div>
+    </section>
+
+    <section className={styles.reportTableCard}>
+      <div className={styles.tableHeader}><strong>{reportTitle}</strong>
       <div className={styles.columnFilter}>
-        <span>Columns</span>
         <details className={styles.columnPicker}>
-          <summary>{visibleColumns.length} of {COLUMN_DEFINITIONS.length} shown</summary>
+          <summary className={styles.iconTrigger} aria-label="Choose report columns" title="Choose report columns"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M4 5h16l-6 7v6l-4 2v-8z" /></svg></summary>
           <div className={styles.columnMenu}>
             {COLUMN_DEFINITIONS.map((column) => {
               const checked = visibleColumnKeys.has(column.key);
@@ -435,17 +445,7 @@ export default function ReportsDashboard({
           </div>
         </details>
       </div>
-      <button className={styles.clearButton} type="button" onClick={clearFilters}>Clear filter</button>
-    </section>
-
-    <section className={styles.summaryGrid}>
-      <div><span>Records</span><strong>{filtered.length}</strong></div>
-      <div><span>Currently inside</span><strong>{inside}</strong></div>
-      <div><span>Exited</span><strong>{exited}</strong></div>
-    </section>
-
-    <section className={styles.reportTableCard}>
-      <div className={styles.tableHeader}><strong>{reportTitle}</strong></div>
+      </div>
       <div className={`${styles.tableWrap} ${role === "EMPLOYEE" ? styles.supervisorReport : ""}`}>
         <table>
           <thead><tr>{visibleColumns.map((column) => <th key={column.key}>{column.label}</th>)}</tr></thead>

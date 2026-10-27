@@ -30,3 +30,19 @@
 .supervisorReport th{font-size:9px;letter-spacing:0}
 .supervisorReport .inside,.supervisorReport .exited{font-size:10px;padding:2px 4px}
 @media(max-width:1000px){.supervisorReport{overflow-x:auto}.supervisorReport table{min-width:960px}}
+
+/* Keep column visibility controls with the report they configure. */
+.filters{grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
+.reportTableCard{overflow:visible}
+.tableHeader{position:relative;z-index:2;border-radius:8px 8px 0 0;background:#fff}
+.tableHeader .columnFilter{display:block;flex-shrink:0}
+.tableHeader .columnPicker summary{min-width:145px;font-size:12px}
+.tableHeader .columnMenu{right:0;left:auto}
+.tableWrap{border-radius:0 0 8px 8px}
+@media(max-width:640px){.tableHeader{align-items:center}.tableHeader .columnPicker summary{min-width:130px;font-size:11px}.tableHeader .columnMenu{min-width:230px;max-width:calc(100vw - 56px)}}
+@media(max-width:480px){.filters{grid-template-columns:1fr}}
+
+.tableHeader .columnPicker .iconTrigger{display:grid;place-items:center;width:34px;min-width:34px;min-height:34px;padding:7px;color:#1769c2;border-color:#ccdaeb;background:#fff}
+.tableHeader .columnPicker .iconTrigger::after{display:none}
+.tableHeader .columnPicker .iconTrigger:hover{background:#f0f6fe}
+.tableHeader .columnPicker .iconTrigger:focus-visible{outline:2px solid #397fc7;outline-offset:3px}

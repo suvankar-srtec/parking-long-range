@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Spinner } from "./LoadingIndicator";
 import OverstayAlert, { type OverstayCard } from "./OverstayAlert";
-import TableColumnFilter from "./TableColumnFilter";
 import LiveVisitTable, { VISIT_COLUMNS as LIVE_COLUMNS } from "./LiveVisitTable";
+import MonitorSummary from "./MonitorSummary";
 import styles from "./SupervisorHeadcount.module.css";
 
 type Option = { id: string; name: string; buildingId?: string };
@@ -58,8 +58,7 @@ export default function RealtimeMonitor({
 }) {
   const [buildingId, setBuildingId] = useState(fixedBuildingId || buildings[0]?.id || "");
   const [companyId, setCompanyId] = useState(fixedCompanyId || "");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [visibleColumns, setVisibleColumns] = useState<Set<number>>(() => new Set(LIVE_COLUMNS.map((_, index) => index)));
+  const visibleColumns = useMemo(() => new Set(LIVE_COLUMNS.map((_, index) => index)), []);
   const [data, setData] = useState<Headcount | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -168,27 +167,13 @@ export default function RealtimeMonitor({
       </div>
     </section> : null}
 
-    <section className={`portfolio-card ${styles.headcount}`}>
-      <div className={styles.titleRow}>
-        <div>
-          <div className="section-kicker"><span className={styles.liveDot} />REALTIME MONITOR</div>
-          <h2>Realtime Head Count</h2>
-          <p>{data ? `${data.buildingName}${data.companyName ? ` · ${data.companyName}` : " · All companies"}` : "Select scope above"} · updates every 5 seconds</p>
-        </div>
-        <div className={styles.clock}><strong>{clock ? clock.toLocaleDateString() : "..."}</strong><span>{clock ? clock.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }) : "..."}</span></div>
-      </div>
-      <div className="portfolio-divider" />
-      {error ? <div className={`parking-feedback parking-feedback-error ${styles.error}`}>{error}</div> : null}
-      {loading && !data ? <p><Spinner /> Loading realtime monitor…</p> : <div className={styles.totals} style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}>
-        <article className={`${styles.totalCard} ${styles.onsite}`}><span>Total On Site</span><strong>{data?.totalOnSite ?? 0}</strong></article>
-        <article className={`${styles.totalCard} ${styles.in}`}><span>Total IN</span><strong>{data?.totalIn ?? 0}</strong></article>
-        <article className={`${styles.totalCard} ${styles.out}`}><span>Total OUT</span><strong>{data?.totalOut ?? 0}</strong></article>
-      </div>}
-    </section>
+    <MonitorSummary buildingName={data ? `${data.buildingName}${data.companyName ? ` - ${data.companyName}` : ""}` : "Select scope above"}
+      clock={clock} error={error} totalOnSite={data?.totalOnSite ?? 0} totalIn={data?.totalIn ?? 0} totalOut={data?.totalOut ?? 0}
+      loading={loading && !data} />
 
     <section className={`portfolio-card ${styles.scanTableCard}`}>
-      <div className={styles.scanTableHeader}><h2>Live Dashboard</h2><div className={styles.liveTableControls}><input type="search" className={styles.liveTableSearch} aria-label="Search live dashboard" placeholder="Search card, vehicle, name or company" value={searchQuery} onChange={event => setSearchQuery(event.target.value)} /><TableColumnFilter columns={LIVE_COLUMNS} selected={visibleColumns} onChange={setVisibleColumns} /></div></div>
-      <LiveVisitTable events={data?.recentEvents || []} visibleColumns={visibleColumns} searchQuery={searchQuery} />
+      <div className={styles.scanTableHeader}><h2>Live Dashboard</h2></div>
+      <LiveVisitTable events={data?.recentEvents || []} visibleColumns={visibleColumns} />
     </section>
   </>;
 }
