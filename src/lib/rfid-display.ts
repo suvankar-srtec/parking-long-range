@@ -1,5 +1,9 @@
 export function scanResultMessage(message: string) {
-  return message.toLowerCase() === "owner parking allocation is full" ? "Allocation full" : message;
+  const normalized = message.trim().replace(/\.$/, "").toLowerCase();
+  if (normalized === "owner parking allocation is full") return "Allocation full";
+  if (normalized === "rfid card is not registered") return "Not Register";
+  if (normalized === "duplicate entry: vehicle is already inside. exit before another entry") return "Exit before Entry";
+  return message;
 }
 
 export function manualExitResult(message: string) {

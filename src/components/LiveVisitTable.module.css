@@ -23,3 +23,16 @@
  .table td:nth-child(9){font-size:11px;white-space:nowrap}
 }
 @media(max-width:600px){.table tr{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+.groupButton{display:inline-flex;align-items:center;flex-wrap:wrap;gap:6px;max-width:100%;border:0!important;background:transparent!important;padding:0!important;color:#c83b35!important;font:inherit;font-weight:600;text-align:left;cursor:pointer}
+.groupButton:hover{text-decoration:underline}.groupButton:focus-visible,.closeButton:focus-visible{outline:2px solid #2876c7;outline-offset:4px}
+.scanBadge{display:inline-flex;align-items:center;justify-content:center;min-width:22px;padding:2px 7px;border-radius:999px;background:#fff0ec;color:#ad392c;font-size:11px;font-weight:700;line-height:1.5}
+.scanDialog{width:min(820px,calc(100vw - 32px));max-height:85dvh;padding:0;border:1px solid #dce5ef;border-radius:18px;background:#fff;color:#253c56;box-shadow:0 24px 90px #12233d40;overflow:hidden}
+.scanDialog::backdrop{background:#14233870;backdrop-filter:blur(3px)}
+.dialogHeader{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:20px 24px;border-bottom:1px solid #e5ecf3}
+.dialogHeader h2{margin:0;font-size:20px}.dialogHeader p{margin:8px 0 0;overflow-wrap:anywhere;font-size:13px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.closeButton{flex-shrink:0;width:32px;height:32px;padding:0!important;border:1px solid #dce5ef!important;border-radius:50%;background:#f7faff!important;color:#52677c!important;font-size:23px;cursor:pointer}
+.scanList{max-height:calc(85dvh - 110px);overflow-y:auto;padding:16px 24px;overscroll-behavior:contain}
+.scanDetail{border:1px solid #e0e8f1;border-radius:12px;padding:16px;margin-bottom:12px}.scanHeading{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:13px;color:#2866a6}
+.scanDetail dl{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:16px 0 0}.scanDetail dl>div{min-width:0}.scanDetail dt{font-size:11px;color:#6c7d91;margin-bottom:4px}.scanDetail dd{margin:0;font-size:13px;overflow-wrap:anywhere}.scanDetail dl>div:last-child{grid-column:1/-1}
+@media(max-width:600px){.dialogHeader{padding:16px}.scanList{padding:12px}.scanDetail dl{grid-template-columns:repeat(2,minmax(0,1fr))}.dialogHeader h2{font-size:18px}}
