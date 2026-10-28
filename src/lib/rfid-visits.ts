@@ -32,7 +32,7 @@ export function pairVisitScans(events: readonly VisitScan[]): VisitRow[] {
       const message = event.message.trim().replace(/\.$/, "").toLowerCase();
       const kind = !allowed && ["rfid card is not registered", "not register"].includes(message) ? "unregistered"
         : !allowed && ["duplicate entry: vehicle is already inside. exit before another entry", "exit before entry"].includes(message) ? "repeated-entry" : null;
-      const groupKey = kind && event.cardNo ? JSON.stringify([key, event.cardNo, kind]) : null;
+      const groupKey = kind && event.cardNo ? JSON.stringify([event.cardNo.trim().toUpperCase(), kind]) : null;
       const group = groupKey ? denialGroups.get(groupKey) : undefined;
       if (group) { group.scans!.push(event); group.latest = event; }
       else {
