@@ -68,7 +68,6 @@ export async function PATCH(request: Request, context: { params: Promise<{ build
   else if (direction === "ENTRY") exitReaderId = null;
   else if (direction === "EXIT") entryReaderId = null;
 
-  if (entryReaderId && exitReaderId && entryReaderId === exitReaderId) return NextResponse.json({ ok: false, message: "Entry and Exit must use different readers." }, { status: 409 });
 
   const entryError = await validateReader(buildingId, entryReaderId, "Entry");
   if (entryError) return NextResponse.json({ ok: false, message: entryError }, { status: 400 });

@@ -7,6 +7,10 @@ def utc(ms=None):
 def millis(value):
     return int(dt.datetime.fromisoformat(value.replace("Z","+00:00")).timestamp()*1000) if value else 0
 
+def scan_reply(packet,result):
+    output='0' if result.get('action')=='ENTRY' else '1' if result.get('action')=='EXIT' else str(packet['Reader'])
+    return {'AcsRes':'1' if result['allowed'] else '0','Reader':str(packet['Reader']),'ActIndex':output,'Time':'1','Card':str(packet.get('Card','')),'Note':result['message'][:31]}
+
 class Ledger:
     def __init__(self,path):
         self.path=str(path)
@@ -15,6 +19,7 @@ class Ledger:
               CREATE TABLE IF NOT EXISTS settings(serial TEXT PRIMARY KEY, manifest TEXT NOT NULL);
               CREATE TABLE IF NOT EXISTS cards(building TEXT,card TEXT,pool TEXT,category TEXT,company TEXT,allowed INTEGER,inside INTEGER,access_ms INTEGER,PRIMARY KEY(building,card));
               CREATE TABLE IF NOT EXISTS cooldown(serial TEXT,reader TEXT,last_ms INTEGER,PRIMARY KEY(serial,reader));
+              CREATE TABLE IF NOT EXISTS presentations(serial TEXT,reader TEXT,card TEXT,last_ms INTEGER,PRIMARY KEY(serial,reader,card));
               CREATE TABLE IF NOT EXISTS outbox(id TEXT PRIMARY KEY,serial TEXT,building TEXT,event TEXT);
             """)
     @contextlib.contextmanager
@@ -79,6 +84,10 @@ class Ledger:
                 if inside is not None:c.execute('UPDATE cards SET inside=?,access_ms=? WHERE building=? AND card=?',(int(inside),now,b,card))
                 c.execute('INSERT INTO outbox VALUES (?,?,?,?)',(event['id'],serial,b,json.dumps(event)))
                 return {'allowed':action in ['ENTRY','EXIT'],'action':action,'message':message}
+            if m['directions'].get(reader)=='ENTRY_EXIT':
+                prior_tag=c.execute('SELECT last_ms FROM presentations WHERE serial=? AND reader=? AND card=?',(serial,reader,card)).fetchone()
+                c.execute('INSERT OR REPLACE INTO presentations VALUES (?,?,?,?)',(serial,reader,card,now))
+                if prior_tag and now-prior_tag['last_ms']<3000:return finish('DUPLICATE','Repeated tag read ignored; remove tag for 3 seconds')
             prior=c.execute('SELECT last_ms FROM cooldown WHERE serial=? AND reader=?',(serial,reader)).fetchone()
             if prior and now-prior['last_ms']<1000:return finish('DUPLICATE','Duplicate scan: reader pauses for 1 second')
             c.execute('INSERT OR REPLACE INTO cooldown VALUES (?,?,?)',(serial,reader,now))
@@ -248,7 +257,7 @@ class Gateway:
                             raw=gateway.cloud('/api/AcsDataApi/RequestCardEvent?'+urllib.parse.urlencode({'token':gateway.config['controller_token']}),packet,True)
                             self.reply(raw);return
                         result=gateway.ledger.scan(gateway.config['serial'],str(packet['Reader']),str(packet.get('Card','')))
-                        fields={'AcsRes':'1' if result['allowed'] else '0','Reader':str(packet['Reader']),'ActIndex':str(packet['Reader']),'Time':'1','Card':str(packet.get('Card','')),'Note':result['message'][:31]}
+                        fields=scan_reply(packet,result)
                     else:fields={'AcsRes':'0'}
                     self.reply(('DATA='+json.dumps(fields,separators=(',',':'))).encode())
                     if str(packet.get('type',packet.get('Type','')))=='0':

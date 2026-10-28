@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { validReaderToken } from "@/lib/rfid-http";
 import { readReaderBody } from "@/lib/rfid-reader";
 import { lockRfid, RFID_TRANSACTION, processReaderScan } from "@/lib/rfid-access";
-import { cloudReply, parseCloudPacket, cloudInputDevice } from "@/lib/cloudc-protocol";
+import { cloudReply, parseCloudPacket, cloudInputDevice, cloudActionIndex } from "@/lib/cloudc-protocol";
 
 import { offlineHeartbeat, saveCloudHistory, cloudOfflineEntryGuard } from "@/lib/cloudc-offline";
 
@@ -95,7 +95,7 @@ export async function handleCloudHttp(request: Request, heartbeat: boolean) {
     stage = "process-scan";
     const result = await processReaderScan({ deviceNumber: cloudInputDevice(packet.Serial, packet.Reader), decodedResult: packet.Card });
     return respond({ AcsRes: result.code === "0000" ? "1" : "0",
-      Reader: packet.Reader, ActIndex: packet.Reader, Time: "1", Card: packet.Card,
+      Reader: packet.Reader, ActIndex: cloudActionIndex(result.action, packet.Reader), Time: "1", Card: packet.Card,
       Note: result.code === "0000" ? "Allowed" : "Denied" });
   } catch (error) {
     const detail = error as { name?: string; code?: string; meta?: { column?: string; table?: string } };

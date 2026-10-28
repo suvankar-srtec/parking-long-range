@@ -1,6 +1,6 @@
 import tempfile,unittest,concurrent.futures
 from pathlib import Path
-from gateway import Ledger,utc
+from gateway import Ledger,utc,scan_reply
 class CapacityTests(unittest.TestCase):
  def setUp(self):
   self.tmp=tempfile.TemporaryDirectory();self.db=Path(self.tmp.name)/"ledger.sqlite";self.ledger=Ledger(self.db);self.now=1800000000000
@@ -10,13 +10,13 @@ class CapacityTests(unittest.TestCase):
  def entry(self,card,offset=0):return self.ledger.scan("test","0",str(card),self.now+offset)
  def test_four_spaces_reject_fifth_and_release_space_after_exit(self):
   for i in range(1,5):self.assertTrue(self.entry(i,i*2000)['allowed'])
-  self.assertFalse(self.entry(5,10000)['allowed']);self.assertIn('allocation is full',self.entry(5,12000)['message'])
+  self.assertFalse(self.entry(5,10000)['allowed']);self.assertIn('Allocation full',self.entry(5,12000)['message'])
   self.assertTrue(self.ledger.scan('test','1','1',self.now+14000)['allowed']);self.assertTrue(self.entry(5,16000)['allowed'])
  def test_concurrent_entries_cannot_overbook(self):
   self.manifest['directions']['1']='ENTRY';self.ledger.snapshot(self.manifest)
   for i in range(1,4):self.entry(i,i*2000)
   with concurrent.futures.ThreadPoolExecutor(2) as pool:results=list(pool.map(lambda pair:self.ledger.scan('test',pair[0],pair[1],self.now+10000),[('0','4'),('1','5')]))
-  self.assertTrue(any('allocation is full' in r['message'] for r in results))
+  self.assertTrue(any('Allocation full' in r['message'] for r in results))
   self.assertEqual(sum(r['allowed'] for r in results),1)
  def test_state_and_unsent_events_survive_restart(self):
   self.entry(1,2000);restarted=Ledger(self.db);self.assertEqual(restarted.scan('test','0','1',self.now+5000)['action'],'DUPLICATE');self.assertEqual(len(restarted.pending('test')),2)
@@ -114,3 +114,18 @@ class GatewayReplyTests(unittest.TestCase):
     if saved_socket is None:saved_socket=client.sock
     else:self.assertIs(client.sock,saved_socket)
   finally:client.close();server.shutdown();server.server_close();worker.join()
+
+class SharedReaderTests(unittest.TestCase):
+ setUp=CapacityTests.setUp
+ tearDown=CapacityTests.tearDown
+ entry=CapacityTests.entry
+ def test_shared_reader_does_not_toggle_while_tag_remains_present(self):
+  self.manifest['directions']['0']='ENTRY_EXIT';self.ledger.snapshot(self.manifest)
+  self.assertEqual(self.entry(1)['action'],'ENTRY')
+  for offset in (500,1500,2500,3500,4500):self.assertEqual(self.entry(1,offset)['action'],'DUPLICATE')
+  self.assertEqual(self.entry(1,8000)['action'],'EXIT')
+
+ def test_relay_tracks_authorized_action_not_reader_input(self):
+  self.assertEqual(scan_reply({'Reader':'1'},{'allowed':True,'action':'ENTRY','message':'Allowed'})['ActIndex'],'0')
+  self.assertEqual(scan_reply({'Reader':'0'},{'allowed':True,'action':'EXIT','message':'Allowed'})['ActIndex'],'1')
+  self.assertEqual(scan_reply({'Reader':'1'},{'allowed':False,'action':'DENIED','message':'Denied'})['AcsRes'],'0')

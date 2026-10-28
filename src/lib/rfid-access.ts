@@ -213,7 +213,7 @@ export async function processReaderScan(input: ParsedRfidReaderMessage, transpor
       }
 
       const effectiveMode = gateReaderDirection(allottedGate.config, reader.id);
-      if (!["ENTRY", "EXIT"].includes(effectiveMode)) {
+      if (!["ENTRY", "EXIT", "ENTRY_EXIT"].includes(effectiveMode)) {
         return record(READER_NO_SUCCESS_CODE, "Gate direction must be configured before scanning.", "DENIED", undefined, visitor.companyId || undefined, undefined, visitor.id);
       }
 
@@ -221,6 +221,10 @@ export async function processReaderScan(input: ParsedRfidReaderMessage, transpor
         return record(READER_NO_SUCCESS_CODE, "Duplicate scan ignored", "DUPLICATE", undefined, visitor.companyId || undefined, undefined, visitor.id);
       }
 
+      if (effectiveMode === "ENTRY_EXIT") {
+        const lastPresentation = await tx.rfidEvent.findFirst({ where: { readerId: reader.id, visitorId: visitor.id, createdAt: { gt: new Date(now.getTime() - 3000) } }, orderBy: { createdAt: "desc" } });
+        if (lastPresentation) return record(READER_NO_SUCCESS_CODE, "Repeated tag read ignored. Remove the tag for 3 seconds before scanning again.", "DUPLICATE", undefined, visitor.companyId || undefined, undefined, visitor.id);
+      }
       let enter: boolean;
       if (effectiveMode === "ENTRY_EXIT") {
         enter = !visitor.isInside;
@@ -361,7 +365,7 @@ export async function processReaderScan(input: ParsedRfidReaderMessage, transpor
     // A lane assignment is authoritative, including when a UHF reader has a general Entry/Exit purpose.
     const assignedDirection = gateReaderDirection(allottedGate.config, reader.id);
     const effectiveMode = assignedDirection;
-      if (!["ENTRY", "EXIT"].includes(effectiveMode)) {
+      if (!["ENTRY", "EXIT", "ENTRY_EXIT"].includes(effectiveMode)) {
       return record(
         READER_NO_SUCCESS_CODE,
         "Gate direction must be configured before scanning.",
@@ -372,6 +376,10 @@ export async function processReaderScan(input: ParsedRfidReaderMessage, transpor
       );
     }
 
+    if (effectiveMode === "ENTRY_EXIT") {
+      const lastPresentation = await tx.rfidEvent.findFirst({ where: { readerId: reader.id, cardNo, createdAt: { gt: new Date(now.getTime() - 3000) } }, orderBy: { createdAt: "desc" } });
+      if (lastPresentation) return record(READER_NO_SUCCESS_CODE, "Repeated tag read ignored. Remove the tag for 3 seconds before scanning again.", "DUPLICATE", vehicle?.id, vehicle?.companyId, ownerVehicle?.id);
+    }
     const currentInside = ownerVehicle ? ownerVehicle.isInside : vehicle!.isInside;
     const lastAccessAt = ownerVehicle ? ownerVehicle.lastAccessAt : vehicle!.lastAccessAt;
     if ((ownerVehicle?.lastAccessDevice || vehicle?.lastAccessDevice) === reader.deviceNumber && lastAccessAt && receivedAt - lastAccessAt.getTime() < SCAN_DEBOUNCE_MS) {

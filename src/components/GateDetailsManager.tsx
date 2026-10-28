@@ -255,7 +255,7 @@ export default function GateDetailsManager({ buildings }: { buildings: BuildingG
                     const configured = gateConfigured(gate);
                     const availableFor = (currentId: string | null, oppositeId: string | null) => selectableReaders.filter((reader) => {
                       if (reader.id === currentId) return true;
-                      if (reader.id === oppositeId) return false;
+                      if (reader.id === oppositeId) return true;
                       return !assignedIds.has(reader.id);
                     });
                     const entryOptions = availableFor(gate.entryReaderId, gate.exitReaderId);

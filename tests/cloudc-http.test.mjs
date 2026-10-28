@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { cloudReply, parseCloudPacket, cloudInputDevice } from "../src/lib/cloudc-protocol.ts";
+import { cloudReply, parseCloudPacket, cloudInputDevice, cloudActionIndex } from "../src/lib/cloudc-protocol.ts";
 test("Cloud C JSON POST and numeric fields", () => {
   assert.deepEqual(parseCloudPacket('{"Serial":"80M236","Key":123}', 'http://test/api'), {Serial:"80M236",Key:"123"});
 });
@@ -32,4 +32,11 @@ test("Separate controller inputs route to independent device identities", () => 
 
 test("Vendor capitalized history Type is accepted", () => {
   assert.equal(parseCloudPacket('{"Serial":"80M236","Type":100}', 'http://test/api').type,"100");
+});
+
+test("gate direction selects physical relay independently of reader input",()=>{
+ assert.equal(cloudActionIndex("ENTRY","1"),"0");
+ assert.equal(cloudActionIndex("EXIT","0"),"1");
+ assert.equal(cloudActionIndex("ENTRY","0"),"0");
+ assert.equal(cloudActionIndex("EXIT","1"),"1");
 });

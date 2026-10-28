@@ -29,3 +29,8 @@ export function cloudInputDevice(serial: string, input: string) {
   }
   return `${serial}-${input === "0" ? "A" : "B"}`;
 }
+
+// SDK: ActIndex 0 = IN relay, 1 = OUT relay. Reader is the input/LCD index.
+export function cloudActionIndex(action: string, reader: string): string {
+  return action === "ENTRY" ? "0" : action === "EXIT" ? "1" : reader;
+}
