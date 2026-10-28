@@ -58,7 +58,7 @@ function readQrImage(file: File) {
 function softwareReader(reader: Reader) { return reader.readerProtocol === "CLOUD_C" || reader.readerProtocol === "UHF_MM"; }
 
 function normalizedMode(mode: string) {
-  if (mode === "REGISTER" || mode === "ENTRY" || mode === "EXIT" || mode === "ENTRY_EXIT") return mode;
+  if (mode === "REGISTER" || mode === "ENTRY" || mode === "EXIT") return mode;
   return "UNASSIGNED";
 }
 
@@ -90,11 +90,11 @@ export default function ReaderConsole({ compact = false }: { compact?: boolean }
   const [summaryDelayed, setSummaryDelayed] = useState(false);
   const [serverClockOffset, setServerClockOffset] = useState(0);
   const [editing, setEditing] = useState<Reader | null>(null);
-  const [editingMode, setEditingMode] = useState("ENTRY_EXIT");
+  const [editingMode, setEditingMode] = useState("ENTRY");
   const [showAvailable, setShowAvailable] = useState(false);
   const [setupStep, setSetupStep] = useState<1 | 2>(1);
   const [selectedReader, setSelectedReader] = useState<Reader | null>(null);
-  const [setupMode, setSetupMode] = useState("ENTRY_EXIT");
+  const [setupMode, setSetupMode] = useState("ENTRY");
   const [registrationQr, setRegistrationQr] = useState("");
   const [entryExitQr, setEntryExitQr] = useState("");
   const [revision, setRevision] = useState(0);
@@ -155,7 +155,7 @@ export default function ReaderConsole({ compact = false }: { compact?: boolean }
     setSelectedReader(null);
     setRegistrationQr("");
     setEntryExitQr("");
-    setSetupMode("ENTRY_EXIT");
+    setSetupMode("ENTRY");
     setSetupStep(1);
     setShowAvailable(true);
   }
@@ -166,13 +166,13 @@ export default function ReaderConsole({ compact = false }: { compact?: boolean }
     setSelectedReader(null);
     setRegistrationQr("");
     setEntryExitQr("");
-    setSetupMode("ENTRY_EXIT");
+    setSetupMode("ENTRY");
     setSetupStep(1);
   }
 
   function openConfigure(reader: Reader) {
     setEditing(reader);
-    setEditingMode(softwareReader(reader) ? normalizedMode(reader.mode) : normalizedMode(reader.mode) === "REGISTER" ? "REGISTER" : "ENTRY_EXIT");
+    setEditingMode(normalizedMode(reader.mode));
     setRegistrationQr("");
     setEntryExitQr("");
   }
@@ -246,7 +246,7 @@ export default function ReaderConsole({ compact = false }: { compact?: boolean }
       setSelectedReader(null);
       setRegistrationQr("");
       setEntryExitQr("");
-      setSetupMode("ENTRY_EXIT");
+      setSetupMode("ENTRY");
       setSetupStep(1);
       setRevision((n) => n + 1);
     });
@@ -363,7 +363,7 @@ export default function ReaderConsole({ compact = false }: { compact?: boolean }
             {data.availableReaders.map((reader) => {
               const state = readerStatus(reader, Date.now() + serverClockOffset);
               const selected = selectedReader?.id === reader.id;
-              return <button type="button" className={`reader-selector-row${selected ? " selected" : ""}`} key={reader.id} onClick={() => { setSelectedReader(reader); setSetupMode(reader.readerProtocol === "UHF_MM" ? "REGISTER" : "ENTRY_EXIT"); }}>
+              return <button type="button" className={`reader-selector-row${selected ? " selected" : ""}`} key={reader.id} onClick={() => { setSelectedReader(reader); setSetupMode("REGISTER"); }}>
                 <div className="reader-selector-main">
                   <div className="reader-selector-title">
                     <i className={"reader-dot " + state.tone} />
@@ -398,7 +398,7 @@ export default function ReaderConsole({ compact = false }: { compact?: boolean }
             </fieldset>
             <div className="reader-allot-note">
               <strong>Purpose will be configured by the Building Admin</strong>
-              <span>Registration or Entry / Exit can be selected only after this reader is allotted to the building.</span>
+              <span>Registration, Entry, or Exit can be selected only after this reader is allotted to the building.</span>
             </div>
           </> : <>
             <fieldset className="reader-setup-fields reader-admin-add-fields" disabled={pending}>
@@ -406,8 +406,8 @@ export default function ReaderConsole({ compact = false }: { compact?: boolean }
               <label>Building<input value={selectedReader.building?.name || data?.buildings.find((building) => building.id === selectedReader.buildingId)?.name || "Assigned building"} readOnly /></label>
               <label>Purpose<select value={setupMode} onChange={(event) => setSetupMode(event.target.value)}>
                 <option value="REGISTER">Registration</option>
-                {softwareReader(selectedReader) && <><option value="ENTRY">Entry</option><option value="EXIT">Exit</option></>}
-                <option value="ENTRY_EXIT">Entry / Exit</option>
+                <option value="ENTRY">Entry</option><option value="EXIT">Exit</option>
+                <option value="UNASSIGNED" disabled>Select role</option>
               </select></label>
             </fieldset>
             <div className="reader-setup-body reader-admin-setup-body">
@@ -449,8 +449,8 @@ export default function ReaderConsole({ compact = false }: { compact?: boolean }
             <label>Building<input value={data?.buildings.find((building) => building.id === editing.buildingId)?.name || "Assigned building"} readOnly /></label>
             <label>Purpose<select name="mode" value={editingMode} onChange={(event) => setEditingMode(event.target.value)}>
               <option value="REGISTER">Registration</option>
-              {softwareReader(editing) && <><option value="ENTRY">Entry</option><option value="EXIT">Exit</option></>}
-              <option value="ENTRY_EXIT">Entry / Exit</option>
+              <option value="ENTRY">Entry</option><option value="EXIT">Exit</option>
+              <option value="UNASSIGNED" disabled>Select role</option>
             </select></label>
             {!softwareReader(editing) && <label className="reader-config-upload">
               {editingMode === "REGISTER" ? "Registration QR" : "Entry / Exit QR"}

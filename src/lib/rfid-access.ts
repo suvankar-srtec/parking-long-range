@@ -212,7 +212,7 @@ export async function processReaderScan(input: ParsedRfidReaderMessage, transpor
         return record(READER_NO_SUCCESS_CODE, "Reader is not allotted to a gate.", "DENIED", undefined, visitor.companyId || undefined, undefined, visitor.id);
       }
 
-      const effectiveMode = gateReaderDirection(allottedGate.config, reader.id);
+      const effectiveMode = ["ENTRY", "EXIT"].includes(reader.mode) ? reader.mode : gateReaderDirection(allottedGate.config, reader.id);
       if (!["ENTRY_EXIT", "ENTRY", "EXIT"].includes(effectiveMode)) {
         return record(READER_NO_SUCCESS_CODE, "Gate direction must be configured before scanning.", "DENIED", undefined, visitor.companyId || undefined, undefined, visitor.id);
       }
@@ -370,7 +370,7 @@ export async function processReaderScan(input: ParsedRfidReaderMessage, transpor
 
     // A lane assignment is authoritative, including when a UHF reader has a general Entry/Exit purpose.
     const assignedDirection = gateReaderDirection(allottedGate.config, reader.id);
-    const effectiveMode = reader.readerProtocol === "UHF_MM" && input.relayControllerSerial && !["ENTRY", "EXIT"].includes(assignedDirection) ? reader.mode : assignedDirection;
+    const effectiveMode = ["ENTRY", "EXIT"].includes(reader.mode) ? reader.mode : assignedDirection;
       if (!["ENTRY_EXIT", "ENTRY", "EXIT"].includes(effectiveMode)) {
       return record(
         READER_NO_SUCCESS_CODE,

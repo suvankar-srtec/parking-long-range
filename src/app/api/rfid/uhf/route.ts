@@ -25,10 +25,10 @@ export async function POST(request: Request) {
     });
     const ready = reader.enabled && !!reader.buildingId && reader.mode === "REGISTER";
     const enrollment = ready ? await prisma.rfidEnrollment.findFirst({ where: { readerId: reader.id, status: "WAITING", expiresAt: { gt: now } }, select: { id: true } }) : null;
-    if (body.action === "heartbeat") return NextResponse.json({ ok: true, protocol: 2, registrationOnly: reader.mode === "REGISTER", mode: reader.mode, enabled: reader.enabled && !!reader.buildingId, captureId: enrollment?.id || null });
+    if (body.action === "heartbeat") return NextResponse.json({ ok: true, protocol: 2, registrationOnly: reader.mode === "REGISTER", mode: reader.mode, enabled: reader.enabled && !!reader.buildingId && ["REGISTER", "ENTRY", "EXIT"].includes(reader.mode), captureId: enrollment?.id || null });
     const epc = String(body.epc || "").toUpperCase();
     if (!/^(?:[A-F0-9]{2}){2,62}$/.test(epc)) throw new ParkingError("Invalid EPC.");
-    if (reader.enabled && reader.buildingId && ["ENTRY", "EXIT", "ENTRY_EXIT"].includes(reader.mode)) {
+    if (reader.enabled && reader.buildingId && ["ENTRY", "EXIT"].includes(reader.mode)) {
       if (body.mode !== reader.mode || !/^[A-Za-z0-9_-]{1,60}$/.test(String(body.controllerSerial || "")) || !/^[a-f0-9-]{36}$/.test(String(body.requestId || ""))) return NextResponse.json({ ok: true, gateAllowed: false });
       const result = await processReaderScan({ deviceNumber, decodedResult: epc, relayControllerSerial: body.controllerSerial, expectedMode: body.mode }, "TCP");
       const gateAllowed = result.code === "0000" && !!result.relay && !!result.eventId && ["ENTRY", "EXIT"].includes(result.action);

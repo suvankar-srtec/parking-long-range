@@ -80,7 +80,13 @@ class Bridge:
         relay_map = target.get("relay_map", [0, 1])
         if not isinstance(relay_map, list) or len(relay_map) != 2 or any(type(value) is not int for value in relay_map) or sorted(relay_map) != [0, 1]:
             raise ValueError("Controller relay_map must contain outputs 0 and 1 once each")
-        physical_output = relay_map[relay["index"]]
+        action_outputs = target.get("action_outputs")
+        if action_outputs is not None:
+            if not isinstance(action_outputs, dict) or set(action_outputs) != {"ENTRY", "EXIT"} or any(type(value) is not int for value in action_outputs.values()) or sorted(action_outputs.values()) != [0, 1]:
+                raise ValueError("action_outputs must assign ENTRY and EXIT to distinct outputs 0 and 1")
+            physical_output = action_outputs[result["action"]]
+        else:
+            physical_output = relay_map[relay["index"]]
         address = ipaddress.ip_address(target["host"])
         if not address.is_private:
             raise ValueError("Controller must have a private LAN address")
@@ -148,7 +154,7 @@ class Bridge:
                             continue
                         submit = self.presence.observe(tag["epc"], context, observed_at)
                         if self.mode != "REGISTER":
-                            submit = submit and self.mode in ("ENTRY", "EXIT", "ENTRY_EXIT") and time.monotonic() >= self.access_ready_at and bool(self.config.get("controller"))
+                            submit = submit and self.mode in ("ENTRY", "EXIT") and time.monotonic() >= self.access_ready_at and bool(self.config.get("controller"))
                         if submit:
                             pending = worker.submit(self.submit_tag, tag["epc"], self.mode, self.capture_id)
 
@@ -170,6 +176,8 @@ class Bridge:
                     raise ValueError("Enrollment cannot operate a relay")
                 logging.info("Registration response: captured=%s (%.2fs)", result.get("captured", False), time.monotonic()-started)
             else:
+                if result.get("gateAllowed") and result.get("action") != mode:
+                    raise ValueError("Relay authorization does not match selected reader role")
                 self.operate(result, request_id)
                 logging.info("Access response: %s (%.2fs)", result.get("message", "Denied"), time.monotonic()-started)
         except Exception as error:

@@ -8,7 +8,7 @@ import { isPrimarySuperAdmin } from "@/lib/super-admin-scope";
 import { parseGateConfig, serializeGateConfig } from "@/lib/gate-config";
 
 const MAX_QR_DATA_LENGTH = 1_600_000;
-const ADMIN_READER_MODES = new Set(["REGISTER", "ENTRY_EXIT"]);
+const ADMIN_READER_MODES = new Set(["REGISTER", "ENTRY", "EXIT"]);
 
 function validateQrData(value: unknown, label: string) {
   const data = String(value ?? "").trim();
@@ -50,7 +50,7 @@ export async function GET() {
 
     const primarySuperAdmin = user.role === "SUPER_ADMIN" && isPrimarySuperAdmin(user);
     const canAssignReaders = user.role === "SUPER_ADMIN";
-    const canConfigureReaders = user.role === "BUILDING_ADMIN" && hasPermission(user, "building.configureReaders");
+    const canConfigureReaders = user.role === "SUPER_ADMIN" || (user.role === "BUILDING_ADMIN" && hasPermission(user, "building.configureReaders"));
 
     const configuredReaderWhere = user.role === "SUPER_ADMIN"
       ? (primarySuperAdmin
@@ -215,7 +215,7 @@ export async function POST(request: Request) {
     if (body?.action === "configureCloud" || body?.action === "configureSoftware") {
       const deviceNumber = String(body?.deviceNumber ?? "").trim();
       const mode = String(body?.mode ?? "");
-      if (!["REGISTER", "ENTRY", "EXIT", "ENTRY_EXIT"].includes(mode)) throw new ParkingError("Select Registration, Entry, Exit, or Entry / Exit.");
+      if (!["REGISTER", "ENTRY", "EXIT"].includes(mode)) throw new ParkingError("Select Registration, Entry, or Exit.");
       const result = await prisma.$transaction(async (tx) => {
         await lockRfid(tx);
         const existing = await tx.rfidReader.findUnique({ where: { deviceNumber } });
@@ -235,10 +235,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true, reader: readerSummary(result), message: "Reader configured and enabled." });
     }
 
-    if (user.role !== "BUILDING_ADMIN") {
-      throw new ParkingError("Only the Building Admin can configure reader purpose.", 403);
+    if (!["BUILDING_ADMIN", "SUPER_ADMIN"].includes(user.role)) {
+      throw new ParkingError("Reader configuration is not permitted.", 403);
     }
-    if (!hasPermission(user, "building.configureReaders")) {
+    if (user.role !== "SUPER_ADMIN" && !hasPermission(user, "building.configureReaders")) {
       throw new ParkingError("Reader configuration is not assigned to this Admin account.", 403);
     }
 
@@ -251,14 +251,17 @@ export async function POST(request: Request) {
       throw new ParkingError("Invalid reader device number.");
     }
     if (!READER_MODES.includes(mode as typeof READER_MODES[number]) || !ADMIN_READER_MODES.has(mode)) {
-      throw new ParkingError("Select Registration or Entry / Exit.");
+      throw new ParkingError("Select Registration, Entry, or Exit.");
     }
 
     const result = await prisma.$transaction(async (tx) => {
       await lockRfid(tx);
       const existing = await tx.rfidReader.findUnique({ where: { deviceNumber } });
       if (!existing) throw new ParkingError("Reader not found.", 404);
-      if (!user.buildingId || existing.buildingId !== user.buildingId) {
+      if (user.role === "SUPER_ADMIN") {
+        const building = existing.buildingId ? await tx.building.findUnique({ where: { id: existing.buildingId } }) : null;
+        if (!building || (!isPrimarySuperAdmin(user) && building.superAdminId !== user.id)) throw new ParkingError("Reader configuration is not permitted.", 403);
+      } else if (!user.buildingId || existing.buildingId !== user.buildingId) {
         throw new ParkingError("This reader is not allotted to your building.", 403);
       }
 
