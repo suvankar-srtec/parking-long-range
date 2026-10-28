@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { monitorDayRange } from "@/lib/monitor-day-range";
 import { Spinner } from "./LoadingIndicator";
 import OverstayAlert, { type OverstayCard } from "./OverstayAlert";
 import LiveVisitTable, { VISIT_COLUMNS as LIVE_COLUMNS } from "./LiveVisitTable";
@@ -39,13 +40,7 @@ type Headcount = {
   updatedAt: string;
 };
 
-function localDayRange() {
-  const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const end = new Date(start);
-  end.setDate(end.getDate() + 1);
-  return { start: start.toISOString(), end: end.toISOString() };
-}
+
 
 export default function RealtimeMonitor({
   buildings,
@@ -66,7 +61,6 @@ export default function RealtimeMonitor({
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [clock, setClock] = useState<Date | null>(null);
-  const range = useMemo(localDayRange, []);
   const requestInFlight = useRef(false);
   const showScopeFilter = !fixedBuildingId;
 
@@ -89,7 +83,7 @@ export default function RealtimeMonitor({
     if (requestInFlight.current || document.visibilityState !== "visible") return;
     requestInFlight.current = true;
     try {
-      const params = new URLSearchParams({ ...range, buildingId });
+      const params = new URLSearchParams({ ...monitorDayRange(), buildingId });
       if (companyId) params.set("companyId", companyId);
       const response = await fetch(`/api/supervisor/headcount?${params.toString()}`, {
         cache: "no-store",
@@ -106,7 +100,7 @@ export default function RealtimeMonitor({
       requestInFlight.current = false;
       setLoading(false);
     }
-  }, [range, buildingId, companyId]);
+  }, [buildingId, companyId]);
 
   useEffect(() => {
     let stopped = false;

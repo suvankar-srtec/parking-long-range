@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { manualExitResult, scanResultMessage } from "@/lib/rfid-display";
+import { monitorDayRange } from "@/lib/monitor-day-range";
 import { Spinner } from "./LoadingIndicator";
 import ActiveCardsDialog, { type ActiveCard } from "./ActiveCardsDialog";
 import LiveVisitTable, { VISIT_COLUMNS as LIVE_COLUMNS } from "./LiveVisitTable";
@@ -39,13 +40,7 @@ type Headcount = {
 
 type PopupState = ScanEvent & { tone: "entry" | "exit" | "denied" | "info" };
 
-function localDayRange() {
-  const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const end = new Date(start);
-  end.setDate(end.getDate() + 1);
-  return { start: start.toISOString(), end: end.toISOString() };
-}
+
 
 function popupTone(event: ScanEvent): PopupState["tone"] {
   if (event.action === "ENTRY" && event.code === "0000") return "entry";
@@ -94,7 +89,6 @@ export default function SupervisorHeadcount({
   const [popup, setPopup] = useState<PopupState | null>(null);
   const [popupQueue, setPopupQueue] = useState<PopupState[]>([]);
   const [showActiveCards, setShowActiveCards] = useState(false);
-  const range = useMemo(localDayRange, []);
   const seenEventId = useRef<string | null>(null);
   const initialized = useRef(false);
   const requestInFlight = useRef(false);
@@ -104,7 +98,7 @@ export default function SupervisorHeadcount({
     if (requestInFlight.current || document.visibilityState !== "visible") return;
     requestInFlight.current = true;
     try {
-      const params = new URLSearchParams(range);
+      const params = new URLSearchParams(monitorDayRange());
       const response = await fetch(`/api/supervisor/headcount?${params.toString()}`, { cache: "no-store", signal: AbortSignal.timeout(8000) });
       const next = await response.json();
       if (!response.ok) throw new Error(next.message || "Unable to load real time monitor.");
@@ -143,7 +137,7 @@ export default function SupervisorHeadcount({
       requestInFlight.current = false;
       setLoading(false);
     }
-  }, [range, showLiveDashboard, showActivity]);
+  }, [showLiveDashboard, showActivity]);
 
   useEffect(() => {
     let stopped = false;

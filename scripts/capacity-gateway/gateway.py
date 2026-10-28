@@ -1,5 +1,5 @@
 """LAN gateway: SQLite capacity checks, crash-safe outbox, cloud reconciliation."""
-import argparse, contextlib, datetime as dt, hmac, json, logging, pathlib, re, sqlite3, ssl, threading, time, urllib.request, urllib.parse, uuid
+import argparse, hashlib, contextlib, datetime as dt, hmac, json, logging, pathlib, re, sqlite3, ssl, threading, time, urllib.request, urllib.parse, uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 def utc(ms=None):
@@ -21,6 +21,7 @@ class Ledger:
               CREATE TABLE IF NOT EXISTS cooldown(serial TEXT,reader TEXT,last_ms INTEGER,PRIMARY KEY(serial,reader));
               CREATE TABLE IF NOT EXISTS presentations(serial TEXT,reader TEXT,card TEXT,last_ms INTEGER,PRIMARY KEY(serial,reader,card));
               CREATE TABLE IF NOT EXISTS outbox(id TEXT PRIMARY KEY,serial TEXT,building TEXT,event TEXT);
+              CREATE TABLE IF NOT EXISTS controller_history(id TEXT PRIMARY KEY,serial TEXT,packet TEXT);
             """)
     @contextlib.contextmanager
     def db(self):
@@ -55,6 +56,20 @@ class Ledger:
         with self.db() as c:return c.execute('SELECT COUNT(*) FROM outbox WHERE serial=?',(serial,)).fetchone()[0]
     def acknowledge(self,ids):
         with self.db() as c:c.executemany('DELETE FROM outbox WHERE id=?',[(i,) for i in ids])
+    def save_controller_history(self,packet):
+        kind=str(packet.get('type',packet.get('Type','')))
+        index='IndexEvent' if kind=='100' else 'IndexAlarm' if kind=='101' else None
+        if index is None or not str(packet.get(index,'')).isdigit():raise ValueError('Invalid controller history index')
+        raw=json.dumps(packet,sort_keys=True,separators=(',',':'))
+        identity=hashlib.sha256(raw.encode()).hexdigest()
+        with self.db() as c:c.execute('INSERT OR IGNORE INTO controller_history VALUES (?,?,?)',(identity,str(packet['Serial']),raw))
+        return {index:str(packet[index])}
+    def history_pending(self,serial):
+        with self.db() as c:return [(row['id'],json.loads(row['packet'])) for row in c.execute('SELECT id,packet FROM controller_history WHERE serial=? ORDER BY rowid LIMIT 20',(serial,))]
+    def history_count(self,serial):
+        with self.db() as c:return c.execute('SELECT COUNT(*) FROM controller_history WHERE serial=?',(serial,)).fetchone()[0]
+    def history_acknowledge(self,identity):
+        with self.db() as c:c.execute('DELETE FROM controller_history WHERE id=?',(identity,))
     def reconcile_native_history(self,packet,utc_offset_minutes=0):
         # Only these successful movement codes are verified on this controller.
         if str(packet.get('Serial'))!='80M236' or str(packet.get('type',packet.get('Type')))!='100':return
@@ -200,6 +215,13 @@ class Gateway:
                 self.last_config_error=type(error).__name__
                 logging.warning('Cloud configuration unavailable (%s)',type(error).__name__)
             self.stop.wait(5)
+    def upload_controller_history(self):
+        for identity,packet in self.ledger.history_pending(self.config['serial']):
+            raw=self.cloud('/api/AcsDataApi/RequestCardEvent?'+urllib.parse.urlencode({'token':self.config['controller_token']}),packet,True)
+            response=json.loads(raw.decode().removeprefix('DATA='))
+            index='IndexEvent' if str(packet.get('type',packet.get('Type')))=='100' else 'IndexAlarm'
+            if str(response.get(index,''))!=str(packet[index]):raise ValueError('Controller history upload not acknowledged')
+            self.ledger.history_acknowledge(identity)
     def sync(self):
         while not self.stop.is_set():
             self.scan_ready.clear()
@@ -212,6 +234,8 @@ class Gateway:
                     self.ledger.acknowledge(acknowledged)
                     if acknowledged and self.ledger.pending(self.config['serial']):self.scan_ready.set()
                     self.last_sync_error=None
+                self.upload_controller_history()
+                self.last_sync_error=None
             except Exception as error:
                 self.last_sync_error=type(error).__name__
                 logging.warning('Cloud unavailable (%s); retaining local capacity ledger',type(error).__name__)
@@ -228,7 +252,7 @@ class Gateway:
 
             def do_GET(self):
                 if self.path=='/health':
-                    self.reply(json.dumps({'ok':True,'cloudError':gateway.last_sync_error,'configError':gateway.last_config_error,'queued':gateway.ledger.pending_count(gateway.config['serial']),'controllerContact':gateway.contact,'lastScanReply':gateway.last_scan_reply,'offlineTestRemainingSeconds':gateway.offline_test_remaining(),'nativeFallbackEnabled':bool(gateway.config.get('native_fallback')),'nativeMemoryError':gateway.native_error}).encode(),content_type='application/json');return
+                    self.reply(json.dumps({'ok':True,'cloudError':gateway.last_sync_error,'configError':gateway.last_config_error,'queued':gateway.ledger.pending_count(gateway.config['serial']),'queuedHistory':gateway.ledger.history_count(gateway.config['serial']),'controllerContact':gateway.contact,'lastScanReply':gateway.last_scan_reply,'offlineTestRemainingSeconds':gateway.offline_test_remaining(),'nativeFallbackEnabled':bool(gateway.config.get('native_fallback')),'nativeMemoryError':gateway.native_error}).encode(),content_type='application/json');return
                 self.do_POST()
             def do_POST(self):
                 started=time.monotonic()
@@ -246,12 +270,14 @@ class Gateway:
                         fields={'Key':str(packet['Key'])}
                         fields.update(gateway.native_heartbeat_fields(packet))
                     elif str(packet.get('type',packet.get('Type',''))) in ['100','101']:
-                        raw=gateway.cloud('/api/AcsDataApi/RequestCardEvent?'+urllib.parse.urlencode({'token':gateway.config['controller_token']}),packet,True)
-                        ack=json.loads(raw.decode().removeprefix('DATA='))
-                        index='IndexEvent' if str(packet.get('type',packet.get('Type')))=='100' else 'IndexAlarm'
-                        if str(ack.get(index,''))==str(packet.get(index,'')) and packet.get(index) is not None:
-                            gateway.ledger.reconcile_native_history(packet,gateway.config.get('controller_utc_offset_minutes',0))
-                        self.reply(raw);return
+                        # Acknowledge only after a durable local commit. Never wait
+                        # for WAN/cloud on the controller's history connection.
+                        fields=gateway.ledger.save_controller_history(packet)
+                        gateway.ledger.reconcile_native_history(packet,gateway.config.get('controller_utc_offset_minutes',0))
+                        self.reply(('DATA='+json.dumps(fields,separators=(',',':'))).encode())
+                        gateway.scan_ready.set()
+                        logging.info('Controller history saved locally; type=%s',str(packet.get('type',packet.get('Type'))))
+                        return
                     elif str(packet.get('type',packet.get('Type','')))=='0' and str(packet.get('Reader')) in ['0','1']:
                         if gateway.ledger.direction(gateway.config['serial'],str(packet['Reader']))=='REGISTER':
                             raw=gateway.cloud('/api/AcsDataApi/RequestCardEvent?'+urllib.parse.urlencode({'token':gateway.config['controller_token']}),packet,True)

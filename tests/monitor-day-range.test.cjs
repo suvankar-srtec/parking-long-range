@@ -1,0 +1,3 @@
+const test=require("node:test"),assert=require("node:assert/strict"),fs=require("node:fs"),vm=require("node:vm"),ts=require("typescript");
+const mod={exports:{}};vm.runInNewContext(ts.transpileModule(fs.readFileSync("src/lib/monitor-day-range.ts","utf8"),{compilerOptions:{module:1}}).outputText,{module:mod,exports:mod.exports,Date});
+test("today uses India midnight and rolls over on the next refresh",()=>{const {monitorDayRange}=mod.exports;assert.deepEqual({...monitorDayRange(new Date("2026-10-28T18:29:59Z"))},{start:"2026-10-27T18:30:00.000Z",end:"2026-10-28T18:30:00.000Z"});assert.deepEqual({...monitorDayRange(new Date("2026-10-28T18:30:00Z"))},{start:"2026-10-28T18:30:00.000Z",end:"2026-10-29T18:30:00.000Z"})});
