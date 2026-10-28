@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { manualExitResult, scanResultMessage } from "@/lib/rfid-display";
 import { Spinner } from "./LoadingIndicator";
-import { useFeedback, useMutation } from "./FeedbackProvider";
+import ActiveCardsDialog, { type ActiveCard } from "./ActiveCardsDialog";
 import LiveVisitTable, { VISIT_COLUMNS as LIVE_COLUMNS } from "./LiveVisitTable";
 import MonitorSummary from "./MonitorSummary";
 import styles from "./SupervisorHeadcount.module.css";
@@ -22,17 +22,6 @@ type ScanEvent = {
   vehicle: { plateNumber: string; ownerName: string; department: string } | null;
   personType: "OWNER" | "EMPLOYEE" | "UNKNOWN";
   company: { name: string } | null;
-};
-
-type ActiveCard = {
-  id: string;
-  rfidCardNo: string;
-  vehicleNumber: string;
-  personName: string;
-  personType: "OWNER" | "EMPLOYEE" | "VISITOR";
-  companyName: string;
-  department: string;
-  entryTime: string | null;
 };
 
 type Headcount = {
@@ -105,8 +94,6 @@ export default function SupervisorHeadcount({
   const [popup, setPopup] = useState<PopupState | null>(null);
   const [popupQueue, setPopupQueue] = useState<PopupState[]>([]);
   const [showActiveCards, setShowActiveCards] = useState(false);
-  const { notify } = useFeedback();
-  const { pending: manualExitPending, execute: executeManualExit } = useMutation();
   const range = useMemo(localDayRange, []);
   const seenEventId = useRef<string | null>(null);
   const initialized = useRef(false);
@@ -182,22 +169,6 @@ export default function SupervisorHeadcount({
     return () => window.clearTimeout(timer);
   }, [popup]);
 
-  function manualExit(card: ActiveCard) {
-    const subject = card.personType === "VISITOR" ? "visitor" : "vehicle";
-    if (!window.confirm(`Request approval to manually exit this ${subject}: ${card.personName} · ${card.vehicleNumber}?`)) return;
-    void executeManualExit(async () => {
-      const response = await fetch("/api/supervisor/manual-exit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: card.id }),
-      });
-      const result = await response.json().catch(() => null);
-      if (!response.ok) throw new Error(result?.message || "Unable to complete manual exit.");
-      notify(result?.message || "Manual exit completed.");
-      await load();
-    });
-  }
-
   if (!showTotalOnSite && !showTotalIn && !showTotalOut && !showLiveDashboard) {
     return <section className={`portfolio-card ${styles.headcount}`}><div className="section-kicker">SUPERVISOR</div><h2>No monitoring features assigned</h2><p className="muted">Ask the building Admin or Super Admin to enable the required Supervisor features.</p></section>;
   }
@@ -215,22 +186,7 @@ export default function SupervisorHeadcount({
       totalOnSite={data?.totalOnSite ?? 0} totalIn={data?.totalIn ?? 0} totalOut={data?.totalOut ?? 0}
       showTotalOnSite={showTotalOnSite} showTotalIn={showTotalIn} showTotalOut={showTotalOut} onViewActive={() => setShowActiveCards(true)} /> : null}
 
-    {showActiveCards ? <div className={styles.activeCardsBackdrop} onMouseDown={(event) => { if (event.target === event.currentTarget) setShowActiveCards(false); }}>
-      <section className={styles.activeCardsModal} role="dialog" aria-modal="true" aria-label="Active RFID and visitor QR entries">
-        <div className={styles.activeCardsHeader}>
-          <div><div className="section-kicker">CURRENTLY ON SITE</div><h2>Active RFID / QR</h2><p>{data?.activeCards?.length || 0} active entr{(data?.activeCards?.length || 0) === 1 ? "y" : "ies"} currently inside.</p></div>
-          <button type="button" className={styles.popupClose} aria-label="Close active cards" onClick={() => setShowActiveCards(false)}>×</button>
-        </div>
-        <div className={styles.activeCardsTableWrap}>
-          <table className={styles.activeCardsTable}>
-            <thead><tr><th>RFID / QR</th><th>Vehicle</th><th>Person</th><th>Type</th><th>Company</th><th>Department / Accessory</th><th>Entry time</th><th>Action</th></tr></thead>
-            <tbody>{data?.activeCards?.length ? data.activeCards.map((card) => <tr key={card.id}>
-              <td data-label="RFID / QR">{card.rfidCardNo}</td><td data-label="Vehicle">{card.vehicleNumber}</td><td data-label="Person">{card.personName}</td><td data-label="Type">{card.personType === "OWNER" ? "Owner" : card.personType === "VISITOR" ? "Visitor" : "Employee"}</td><td data-label="Company">{card.companyName}</td><td data-label="Department / Accessory">{card.department}</td><td data-label="Entry time">{card.entryTime ? new Date(card.entryTime).toLocaleString() : "-"}</td><td data-label="Action">{data?.canManualExit ? <button type="button" className={styles.manualExitButton} title="Request manual exit approval" aria-label={`Remove ${card.vehicleNumber}: request manual exit approval`} disabled={manualExitPending} onClick={() => manualExit(card)}>{manualExitPending ? "Please wait…" : "Remove"}</button> : "-"}</td>
-            </tr>) : <tr><td colSpan={8} className={styles.emptyTable}>No active RFID cards or visitor QR entries are currently on site.</td></tr>}</tbody>
-          </table>
-        </div>
-      </section>
-    </div> : null}
+    {showActiveCards && <ActiveCardsDialog cards={data?.activeCards || []} canRemove={!!data?.canManualExit} onClose={() => setShowActiveCards(false)} onChanged={load} />}
 
     {showLiveDashboard ? <section className={`portfolio-card ${styles.scanTableCard}`}>
       <div className={styles.scanTableHeader}><h2>Live Dashboard</h2></div>

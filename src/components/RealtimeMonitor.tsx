@@ -5,6 +5,7 @@ import { Spinner } from "./LoadingIndicator";
 import OverstayAlert, { type OverstayCard } from "./OverstayAlert";
 import LiveVisitTable, { VISIT_COLUMNS as LIVE_COLUMNS } from "./LiveVisitTable";
 import MonitorSummary from "./MonitorSummary";
+import ActiveCardsDialog from "./ActiveCardsDialog";
 import styles from "./SupervisorHeadcount.module.css";
 
 type Option = { id: string; name: string; buildingId?: string };
@@ -33,6 +34,7 @@ type Headcount = {
   totalOut: number;
   totalOnSite: number;
   activeCards: OverstayCard[];
+  canManualExit: boolean;
   recentEvents: ScanEvent[];
   updatedAt: string;
 };
@@ -59,6 +61,7 @@ export default function RealtimeMonitor({
   const [buildingId, setBuildingId] = useState(fixedBuildingId || buildings[0]?.id || "");
   const [companyId, setCompanyId] = useState(fixedCompanyId || "");
   const visibleColumns = useMemo(() => new Set(LIVE_COLUMNS.map((_, index) => index)), []);
+  const [showActiveCards, setShowActiveCards] = useState(false);
   const [data, setData] = useState<Headcount | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -171,7 +174,8 @@ export default function RealtimeMonitor({
 
     <MonitorSummary buildingName={data ? `${data.buildingName}${data.companyName ? ` - ${data.companyName}` : ""}` : "Select scope above"}
       clock={clock} error={error} totalOnSite={data?.totalOnSite ?? 0} totalIn={data?.totalIn ?? 0} totalOut={data?.totalOut ?? 0}
-      loading={loading && !data} />
+      loading={loading && !data} onViewActive={() => setShowActiveCards(true)} />
+    {showActiveCards && <ActiveCardsDialog key={`${buildingId}:${companyId}`} cards={data?.activeCards || []} canRemove={!!data?.canManualExit} onClose={() => setShowActiveCards(false)} onChanged={load} />}
 
     <section className={`portfolio-card ${styles.scanTableCard}`}>
       <div className={styles.scanTableHeader}><h2>Live Dashboard</h2></div>
