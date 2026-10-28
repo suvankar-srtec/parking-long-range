@@ -154,7 +154,7 @@ class Bridge:
                             continue
                         submit = self.presence.observe(tag["epc"], context, observed_at)
                         if self.mode != "REGISTER":
-                            submit = submit and self.mode in ("ENTRY", "EXIT") and time.monotonic() >= self.access_ready_at and bool(self.config.get("controller"))
+                            submit = submit and self.mode in ("ENTRY", "EXIT", "ENTRY_EXIT") and time.monotonic() >= self.access_ready_at and bool(self.config.get("controller"))
                         if submit:
                             pending = worker.submit(self.submit_tag, tag["epc"], self.mode, self.capture_id)
 
@@ -176,7 +176,7 @@ class Bridge:
                     raise ValueError("Enrollment cannot operate a relay")
                 logging.info("Registration response: captured=%s (%.2fs)", result.get("captured", False), time.monotonic()-started)
             else:
-                if result.get("gateAllowed") and result.get("action") != mode:
+                if result.get("gateAllowed") and mode != "ENTRY_EXIT" and result.get("action") != mode:
                     raise ValueError("Relay authorization does not match selected reader role")
                 self.operate(result, request_id)
                 logging.info("Access response: %s (%.2fs)", result.get("message", "Denied"), time.monotonic()-started)

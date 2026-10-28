@@ -212,8 +212,8 @@ export async function processReaderScan(input: ParsedRfidReaderMessage, transpor
         return record(READER_NO_SUCCESS_CODE, "Reader is not allotted to a gate.", "DENIED", undefined, visitor.companyId || undefined, undefined, visitor.id);
       }
 
-      const effectiveMode = ["ENTRY", "EXIT"].includes(reader.mode) ? reader.mode : gateReaderDirection(allottedGate.config, reader.id);
-      if (!["ENTRY_EXIT", "ENTRY", "EXIT"].includes(effectiveMode)) {
+      const effectiveMode = gateReaderDirection(allottedGate.config, reader.id);
+      if (!["ENTRY", "EXIT"].includes(effectiveMode)) {
         return record(READER_NO_SUCCESS_CODE, "Gate direction must be configured before scanning.", "DENIED", undefined, visitor.companyId || undefined, undefined, visitor.id);
       }
 
@@ -341,20 +341,10 @@ export async function processReaderScan(input: ParsedRfidReaderMessage, transpor
     if (reader.readerProtocol === "UHF_MM" && input.relayControllerSerial && /^[A-Za-z0-9_-]{1,60}$/.test(input.relayControllerSerial)) {
       const serial = input.relayControllerSerial;
       const outputs = await tx.rfidReader.findMany({ where: { deviceNumber: { in: [serial + "-A", serial + "-B"] }, buildingId: reader.buildingId, enabled: true, readerProtocol: "CLOUD_C" }, select: { id: true, deviceNumber: true } });
-      const outputFor = (id: string | null) => outputs.find(output => output.id === id);
-      const candidates = buildingGates.map(gate => ({ gate, config: parseGateConfig(gate.direction) }));
-      // A network-only reader can occupy a lane while the opposite Cloud+ output
-      // identifies the controller. Its relay is the other output on that controller.
-      allottedGate = candidates.find(({ config }) => config.direction === "ENTRY_EXIT" && (
-        (config.entryReaderId === reader.id && !!outputFor(config.exitReaderId)) ||
-        (config.exitReaderId === reader.id && !!outputFor(config.entryReaderId))
-      )) || candidates.find(({ config }) => config.direction === "ENTRY_EXIT" && !!outputFor(config.entryReaderId) && !!outputFor(config.exitReaderId) && config.entryReaderId !== config.exitReaderId);
-      if (allottedGate) {
-        const entry = outputFor(allottedGate.config.entryReaderId);
-        const exit = outputFor(allottedGate.config.exitReaderId);
-        const entryIndex = entry ? (entry.deviceNumber.endsWith("-A") ? 0 : 1) : (exit!.deviceNumber.endsWith("-A") ? 1 : 0);
-        const exitIndex = exit ? (exit.deviceNumber.endsWith("-A") ? 0 : 1) : (entry!.deviceNumber.endsWith("-A") ? 1 : 0);
-        relayTargets = { ENTRY: { serial, index: entryIndex }, EXIT: { serial, index: exitIndex } };
+      // Gate Details owns lane direction. Never borrow another gate's direction
+      // or alternate based on occupancy when this UHF reader is unassigned.
+      if (allottedGate && outputs.some(output => output.deviceNumber === serial + "-A") && outputs.some(output => output.deviceNumber === serial + "-B")) {
+        relayTargets = { ENTRY: { serial, index: 0 }, EXIT: { serial, index: 1 } };
       }
     }
     if (!allottedGate) {
@@ -370,8 +360,8 @@ export async function processReaderScan(input: ParsedRfidReaderMessage, transpor
 
     // A lane assignment is authoritative, including when a UHF reader has a general Entry/Exit purpose.
     const assignedDirection = gateReaderDirection(allottedGate.config, reader.id);
-    const effectiveMode = ["ENTRY", "EXIT"].includes(reader.mode) ? reader.mode : assignedDirection;
-      if (!["ENTRY_EXIT", "ENTRY", "EXIT"].includes(effectiveMode)) {
+    const effectiveMode = assignedDirection;
+      if (!["ENTRY", "EXIT"].includes(effectiveMode)) {
       return record(
         READER_NO_SUCCESS_CODE,
         "Gate direction must be configured before scanning.",

@@ -8,7 +8,7 @@ import { isPrimarySuperAdmin } from "@/lib/super-admin-scope";
 import { parseGateConfig, serializeGateConfig } from "@/lib/gate-config";
 
 const MAX_QR_DATA_LENGTH = 1_600_000;
-const ADMIN_READER_MODES = new Set(["REGISTER", "ENTRY", "EXIT"]);
+const ADMIN_READER_MODES = new Set(["REGISTER", "ENTRY_EXIT"]);
 
 function validateQrData(value: unknown, label: string) {
   const data = String(value ?? "").trim();
@@ -215,7 +215,7 @@ export async function POST(request: Request) {
     if (body?.action === "configureCloud" || body?.action === "configureSoftware") {
       const deviceNumber = String(body?.deviceNumber ?? "").trim();
       const mode = String(body?.mode ?? "");
-      if (!["REGISTER", "ENTRY", "EXIT"].includes(mode)) throw new ParkingError("Select Registration, Entry, or Exit.");
+      if (!["REGISTER", "ENTRY_EXIT"].includes(mode)) throw new ParkingError("Select Registration or Entry / Exit.");
       const result = await prisma.$transaction(async (tx) => {
         await lockRfid(tx);
         const existing = await tx.rfidReader.findUnique({ where: { deviceNumber } });
@@ -251,7 +251,7 @@ export async function POST(request: Request) {
       throw new ParkingError("Invalid reader device number.");
     }
     if (!READER_MODES.includes(mode as typeof READER_MODES[number]) || !ADMIN_READER_MODES.has(mode)) {
-      throw new ParkingError("Select Registration, Entry, or Exit.");
+      throw new ParkingError("Select Registration or Entry / Exit.");
     }
 
     const result = await prisma.$transaction(async (tx) => {

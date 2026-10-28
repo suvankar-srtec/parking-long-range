@@ -31,8 +31,6 @@ async function validateReader(buildingId: string, readerId: string | null, label
   if (!reader.enabled) return `${label} reader is disabled and cannot be allotted to a gate.`;
   if (reader.mode === "REGISTER") return `A Registration reader cannot be used as the ${label.toLowerCase()} reader.`;
   if (reader.mode === "UNASSIGNED") return `${label} reader purpose has not been configured by the Building Admin.`;
-  if (label === "Entry" && reader.mode === "EXIT") return "This reader is configured for Exit only.";
-  if (label === "Exit" && reader.mode === "ENTRY") return "This reader is configured for Entry only.";
   return null;
 }
 

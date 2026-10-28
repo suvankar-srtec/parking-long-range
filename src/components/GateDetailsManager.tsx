@@ -258,8 +258,8 @@ export default function GateDetailsManager({ buildings }: { buildings: BuildingG
                       if (reader.id === oppositeId) return false;
                       return !assignedIds.has(reader.id);
                     });
-                    const entryOptions = availableFor(gate.entryReaderId, gate.exitReaderId).filter((reader) => reader.mode !== "EXIT");
-                    const exitOptions = availableFor(gate.exitReaderId, gate.entryReaderId).filter((reader) => reader.mode !== "ENTRY");
+                    const entryOptions = availableFor(gate.entryReaderId, gate.exitReaderId);
+                    const exitOptions = availableFor(gate.exitReaderId, gate.entryReaderId);
 
                     return <tr key={gate.gateNumber}>
                       <td><span className="gate-number">Gate {gate.gateNumber}</span></td>

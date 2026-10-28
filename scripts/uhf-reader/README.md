@@ -1,6 +1,6 @@
 # UHF network bridge
 
-Admin and Super Admin select Registration, Entry, or Exit. UHF readers do not require QR configuration. Registration captures full EPCs only during active enrollment. Access scans use website capacity and anti-passback checks, then operate the existing same-building Cloud+ gate without changing wired reader assignments.
+Admin and Super Admin select Registration or Entry/Exit purpose. Gate Details assigns each access reader to exactly one Entry or Exit lane. Unassigned readers are denied; occupancy never selects direction. UHF readers do not require QR configuration. Registration captures full EPCs only during active enrollment. Access scans use website capacity and anti-passback checks, then operate the existing same-building Cloud+ gate without changing wired reader assignments.
 
 Private JSON settings: host, port, device_number, app_url, reader_token, log, relay_claims (SQLite path), controller {host, serial, username, password}. Keep credentials outside the repository. Run python bridge.py --config PRIVATE_PATH. Close the vendor demo first.
 

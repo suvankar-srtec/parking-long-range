@@ -58,7 +58,8 @@ function readQrImage(file: File) {
 function softwareReader(reader: Reader) { return reader.readerProtocol === "CLOUD_C" || reader.readerProtocol === "UHF_MM"; }
 
 function normalizedMode(mode: string) {
-  if (mode === "REGISTER" || mode === "ENTRY" || mode === "EXIT") return mode;
+  if (mode === "REGISTER") return mode;
+  if (["ENTRY", "EXIT", "ENTRY_EXIT"].includes(mode)) return "ENTRY_EXIT";
   return "UNASSIGNED";
 }
 
@@ -90,11 +91,11 @@ export default function ReaderConsole({ compact = false }: { compact?: boolean }
   const [summaryDelayed, setSummaryDelayed] = useState(false);
   const [serverClockOffset, setServerClockOffset] = useState(0);
   const [editing, setEditing] = useState<Reader | null>(null);
-  const [editingMode, setEditingMode] = useState("ENTRY");
+  const [editingMode, setEditingMode] = useState("ENTRY_EXIT");
   const [showAvailable, setShowAvailable] = useState(false);
   const [setupStep, setSetupStep] = useState<1 | 2>(1);
   const [selectedReader, setSelectedReader] = useState<Reader | null>(null);
-  const [setupMode, setSetupMode] = useState("ENTRY");
+  const [setupMode, setSetupMode] = useState("ENTRY_EXIT");
   const [registrationQr, setRegistrationQr] = useState("");
   const [entryExitQr, setEntryExitQr] = useState("");
   const [revision, setRevision] = useState(0);
@@ -155,7 +156,7 @@ export default function ReaderConsole({ compact = false }: { compact?: boolean }
     setSelectedReader(null);
     setRegistrationQr("");
     setEntryExitQr("");
-    setSetupMode("ENTRY");
+    setSetupMode("ENTRY_EXIT");
     setSetupStep(1);
     setShowAvailable(true);
   }
@@ -166,7 +167,7 @@ export default function ReaderConsole({ compact = false }: { compact?: boolean }
     setSelectedReader(null);
     setRegistrationQr("");
     setEntryExitQr("");
-    setSetupMode("ENTRY");
+    setSetupMode("ENTRY_EXIT");
     setSetupStep(1);
   }
 
@@ -246,7 +247,7 @@ export default function ReaderConsole({ compact = false }: { compact?: boolean }
       setSelectedReader(null);
       setRegistrationQr("");
       setEntryExitQr("");
-      setSetupMode("ENTRY");
+      setSetupMode("ENTRY_EXIT");
       setSetupStep(1);
       setRevision((n) => n + 1);
     });
@@ -398,7 +399,7 @@ export default function ReaderConsole({ compact = false }: { compact?: boolean }
             </fieldset>
             <div className="reader-allot-note">
               <strong>Purpose will be configured by the Building Admin</strong>
-              <span>Registration, Entry, or Exit can be selected only after this reader is allotted to the building.</span>
+              <span>Registration or Entry / Exit can be selected only after this reader is allotted to the building.</span>
             </div>
           </> : <>
             <fieldset className="reader-setup-fields reader-admin-add-fields" disabled={pending}>
@@ -406,7 +407,7 @@ export default function ReaderConsole({ compact = false }: { compact?: boolean }
               <label>Building<input value={selectedReader.building?.name || data?.buildings.find((building) => building.id === selectedReader.buildingId)?.name || "Assigned building"} readOnly /></label>
               <label>Purpose<select value={setupMode} onChange={(event) => setSetupMode(event.target.value)}>
                 <option value="REGISTER">Registration</option>
-                <option value="ENTRY">Entry</option><option value="EXIT">Exit</option>
+                <option value="ENTRY_EXIT">Entry / Exit</option>
                 <option value="UNASSIGNED" disabled>Select role</option>
               </select></label>
             </fieldset>
@@ -449,7 +450,7 @@ export default function ReaderConsole({ compact = false }: { compact?: boolean }
             <label>Building<input value={data?.buildings.find((building) => building.id === editing.buildingId)?.name || "Assigned building"} readOnly /></label>
             <label>Purpose<select name="mode" value={editingMode} onChange={(event) => setEditingMode(event.target.value)}>
               <option value="REGISTER">Registration</option>
-              <option value="ENTRY">Entry</option><option value="EXIT">Exit</option>
+              <option value="ENTRY_EXIT">Entry / Exit</option>
               <option value="UNASSIGNED" disabled>Select role</option>
             </select></label>
             {!softwareReader(editing) && <label className="reader-config-upload">

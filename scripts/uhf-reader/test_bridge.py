@@ -52,6 +52,12 @@ class BridgeTests(unittest.TestCase):
             bridge.submit_tag("E20001", "ENTRY", None)
             operate.assert_not_called()
 
+    def test_combined_purpose_accepts_only_server_authorized_gate_direction(self):
+        bridge = Bridge({"app_url": "http://localhost:3000", "reader_token": "synthetic", "device_number": "UHF-001122334455"})
+        with patch.object(bridge, "post", return_value={"gateAllowed": True, "action": "EXIT"}), patch.object(bridge, "operate") as operate:
+            bridge.submit_tag("E20001", "ENTRY_EXIT", None)
+            operate.assert_called_once()
+
     def test_held_tag_submits_only_once_per_capture(self):
         p = Presence()
         self.assertTrue(p.observe("E20001", "capture-1", 0))
