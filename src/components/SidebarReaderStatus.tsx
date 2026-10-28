@@ -66,12 +66,8 @@ export default function SidebarReaderStatus({
       : <span className="sidebar-reader-title">{title}</span>}
     {!loaded ? null : readers.length === 0 ? <span className="sidebar-reader-empty">No reader allotted</span> : readers.map((reader) => {
       const online = readerStatus(reader, Date.now() + serverClockOffset).tone === "online";
-      const cloudInput = (reader.readerProtocol === "CLOUD_C" || reader.name?.startsWith("Cloud C "))
-        && /-[AB]$/.test(reader.deviceNumber);
-      const label = cloudInput
-        ? `${reader.deviceNumber} (${reader.deviceNumber.endsWith("-A") ? "IN/WG1" : "OUT/WG2"})`
-        : reader.name || "Reader";
-      return <div className="sidebar-reader-item" key={reader.id} title={online ? "Heartbeat active" : "Heartbeat unavailable"}>
+      const label = reader.name || reader.deviceNumber || "Reader";
+      return <div className="sidebar-reader-item" key={reader.id} title={`${reader.deviceNumber} - ${online ? "Heartbeat active" : "Heartbeat unavailable"}`}>
         <i className={online ? "online" : "offline"} aria-hidden="true" />
         <span>{label}</span>
       </div>;

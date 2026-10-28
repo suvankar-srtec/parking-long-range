@@ -273,7 +273,7 @@ export default function ReaderConsole({ compact = false }: { compact?: boolean }
       const input = reader.deviceNumber.endsWith("-A") ? "A" : "B";
       return <article className="controller-input-row" key={reader.id}>
         <div className="controller-input-identity"><span className="controller-input-letter">{input}</span>
-          <div><h3>Reader {input} <small>{input === "A" ? "IN / WG1" : "OUT / WG2"}</small></h3>
+          <div><h3>{reader.name || `Reader ${input}`} <small>{`Controller ${input} / WG${input === "A" ? "1" : "2"}`}</small></h3>
             <span className="controller-input-device">{reader.deviceNumber}</span></div></div>
         <div className="controller-input-purpose"><span>{modeLabel(normalizedMode(reader.mode))}</span>
           <small><i className={"reader-dot " + state.tone} />{state.label}{!reader.enabled ? " ? Disabled" : ""}</small></div>
@@ -288,7 +288,7 @@ export default function ReaderConsole({ compact = false }: { compact?: boolean }
           const state = error ? { tone: "unknown", label: "Status unavailable" } : readerStatus(reader, Date.now() + serverClockOffset);
           return <article className="reader-card" key={reader.id}>
             {reader.readerProtocol === "UHF_MM" ? <p className="muted">UHF network reader - Software-controlled purpose</p> : null}
-            <h3>{reader.readerProtocol === "CLOUD_C" && /-[AB]$/.test(reader.deviceNumber) ? `Reader ${reader.deviceNumber.endsWith("-A") ? "A (IN/WG1)" : "B (OUT/WG2)"}` : reader.name}</h3>
+            <h3>{reader.name || reader.deviceNumber}</h3>
             <p>{reader.deviceNumber} · {reader.readerIp || "IP not detected"}</p>
             <div className="reader-line"><i className={"reader-dot " + state.tone} />{state.label}</div>
             <p>{data!.buildings.find((building) => building.id === reader.buildingId)?.name || "Building not assigned"} · {modeLabel(normalizedMode(reader.mode))}</p>
