@@ -150,7 +150,8 @@ export default function SupervisorHeadcount({
       setData((current) => ({ ...next, recentEvents: mergeEvents(current?.recentEvents || [], incomingEvents) }));
       setError("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to load real time monitor.");
+      const timedOut = err instanceof Error && (err.name === "TimeoutError" || err.name === "AbortError");
+      setError(timedOut ? "" : err instanceof Error ? err.message : "Unable to load real time monitor.");
     } finally {
       requestInFlight.current = false;
       setLoading(false);

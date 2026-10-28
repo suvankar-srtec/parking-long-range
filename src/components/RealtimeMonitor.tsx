@@ -97,7 +97,8 @@ export default function RealtimeMonitor({
       setData(next);
       setError("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to load realtime monitor.");
+      const timedOut = err instanceof Error && (err.name === "TimeoutError" || err.name === "AbortError");
+      setError(timedOut ? "" : err instanceof Error ? err.message : "Unable to load realtime monitor.");
     } finally {
       requestInFlight.current = false;
       setLoading(false);
