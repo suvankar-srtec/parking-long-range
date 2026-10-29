@@ -1,3 +1,4 @@
+import { withAuditRequest } from "@/lib/audit-request";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/session";
@@ -5,7 +6,7 @@ import { isPrimarySuperAdmin } from "@/lib/super-admin-scope";
 import { lockBuildingParking, ParkingError } from "@/lib/building-parking";
 import { rfidApiError } from "@/lib/rfid-access";
 
-export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
+async function handlePATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const user = await getCurrentUser();
     if (!user || !["SUPER_ADMIN", "BUILDING_ADMIN"].includes(user.role)) throw new ParkingError("Admin or Super Admin access required.", 403);
@@ -35,3 +36,5 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     return NextResponse.json({ ok: true, message: "Access settings saved. Connected devices will sync automatically.", policy });
   } catch (error) { return rfidApiError(error); }
 }
+
+export const PATCH = withAuditRequest(handlePATCH);

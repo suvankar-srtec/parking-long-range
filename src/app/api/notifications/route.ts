@@ -1,3 +1,4 @@
+import { withAuditRequest } from "@/lib/audit-request";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { notificationContext } from "@/lib/manual-exit-notifications";
@@ -15,7 +16,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ ok: true, unread, notifications: records.map(({ reads, ...record }) => ({ ...record, read: reads.length > 0 })) }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) { return rfidApiError(error); }
 }
-export async function PATCH(request: Request) {
+async function handlePATCH(request: Request) {
   try {
     const { user, where } = await notificationContext();
     const body = await request.json();
@@ -29,3 +30,5 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ ok: true });
   } catch (error) { return rfidApiError(error); }
 }
+
+export const PATCH = withAuditRequest(handlePATCH);

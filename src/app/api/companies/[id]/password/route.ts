@@ -1,10 +1,11 @@
+import { withAuditRequest } from "@/lib/audit-request";
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/permissions";
 import { getCurrentUser } from "@/lib/session";
 
-export async function PATCH(
+async function handlePATCH(
   request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
@@ -80,3 +81,5 @@ export async function PATCH(
     );
   }
 }
+
+export const PATCH = withAuditRequest(handlePATCH);

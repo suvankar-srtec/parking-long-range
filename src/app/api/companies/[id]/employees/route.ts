@@ -1,3 +1,4 @@
+import { withAuditRequest } from "@/lib/audit-request";
 import { canCreateCompanyPeople } from "@/lib/employee-creation";
 import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
@@ -6,7 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/session";
 import { claimUserId, UserIdError } from "@/lib/user-id-reservations";
 
-export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
+async function handlePOST(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const { id: companyId } = await context.params;
     const owner = await getCurrentUser();
@@ -84,3 +85,5 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     return NextResponse.json({ ok: false, message: "Unable to create employee or company owner." }, { status: 500 });
   }
 }
+
+export const POST = withAuditRequest(handlePOST);

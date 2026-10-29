@@ -1,3 +1,4 @@
+import { withAuditRequest } from "@/lib/audit-request";
 import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
@@ -8,7 +9,7 @@ import { lockBuildingParking, ParkingError } from "@/lib/building-parking";
 
 const ARCHIVED_DEPARTMENT_PREFIX = "__ARCHIVED__";
 
-export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
+async function handlePATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   const { id } = await context.params;
   const user = await getCurrentUser();
 
@@ -242,3 +243,5 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     );
   }
 }
+
+export const PATCH = withAuditRequest(handlePATCH);

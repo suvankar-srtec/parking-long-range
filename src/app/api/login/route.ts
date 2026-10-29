@@ -1,10 +1,11 @@
+import { withAuditRequest } from "@/lib/audit-request";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { accountAccessStatus } from "@/lib/building-status";
 import { missingLoginConfiguration, loginErrorDiagnostic } from "@/lib/login-diagnostics";
 import { createSessionToken, SESSION_COOKIE, SESSION_MAX_AGE } from "@/lib/session";
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   try {
     let body;
     try { body = await request.json(); }
@@ -52,3 +53,5 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, message: "Unable to sign in. Please try again.", reference: diagnostic.reason }, { status: 500 });
   }
 }
+
+export const POST = withAuditRequest(handlePOST);

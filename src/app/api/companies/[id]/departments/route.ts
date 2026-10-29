@@ -1,3 +1,4 @@
+import { withAuditRequest } from "@/lib/audit-request";
 import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
@@ -39,7 +40,7 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
   return NextResponse.json({ ok: true, departments, maximumDepartments: company?.maximumDepartments ?? 0 });
 }
 
-export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
+async function handlePOST(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const { id: companyId } = await context.params;
     const user = await canManageCompany(companyId);
@@ -74,3 +75,5 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     return NextResponse.json({ ok: false, message: "Unable to add department." }, { status: 500 });
   }
 }
+
+export const POST = withAuditRequest(handlePOST);

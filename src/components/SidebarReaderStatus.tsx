@@ -26,6 +26,12 @@ export default function SidebarReaderStatus({
   linkToAccess?: boolean;
 }) {
   const [readers, setReaders] = useState<SidebarReader[]>([]);
+  const [statusAvailable, setStatusAvailable] = useState(false);
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
   const [loaded, setLoaded] = useState(false);
   const [serverClockOffset, setServerClockOffset] = useState(0);
 
@@ -42,12 +48,13 @@ export default function SidebarReaderStatus({
         const payload = await response.json() as ReaderResponse;
         if (!response.ok) throw new Error("Reader status unavailable.");
         if (!stopped) {
+          setStatusAvailable(true);
           setServerClockOffset(readerServerClockOffset(payload.serverTime));
           setReaders(Array.isArray(payload.readers) ? payload.readers : []);
           setLoaded(true);
         }
       } catch {
-        if (!stopped) setLoaded(true);
+        if (!stopped) { setLoaded(true); setStatusAvailable(false); }
       }
 
       if (!stopped) timer = window.setTimeout(load, 5000);
@@ -65,7 +72,7 @@ export default function SidebarReaderStatus({
       ? <Link href="/access-control" className="sidebar-reader-title">{title}</Link>
       : <span className="sidebar-reader-title">{title}</span>}
     {!loaded ? null : readers.length === 0 ? <span className="sidebar-reader-empty">No reader allotted</span> : readers.map((reader) => {
-      const online = readerStatus(reader, Date.now() + serverClockOffset).tone === "online";
+      const online = statusAvailable && readerStatus(reader, now + serverClockOffset).tone === "online";
       const label = reader.name || reader.deviceNumber || "Reader";
       return <div className="sidebar-reader-item" key={reader.id} title={`${reader.deviceNumber} - ${online ? "Heartbeat active" : "Heartbeat unavailable"}`}>
         <i className={online ? "online" : "offline"} aria-hidden="true" />

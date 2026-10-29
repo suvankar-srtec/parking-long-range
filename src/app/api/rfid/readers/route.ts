@@ -1,3 +1,4 @@
+import { withAuditRequest } from "@/lib/audit-request";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { READER_MODES } from "@/lib/rfid-reader";
@@ -103,7 +104,7 @@ export async function GET() {
   }
 }
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   try {
     const user = await rfidUser();
     assertReaderPageAccess(user);
@@ -292,3 +293,5 @@ export async function POST(request: Request) {
     return rfidApiError(error);
   }
 }
+
+export const POST = withAuditRequest(handlePOST);

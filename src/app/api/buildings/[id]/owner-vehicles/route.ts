@@ -1,3 +1,4 @@
+import { withAuditRequest } from "@/lib/audit-request";
 import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
@@ -24,7 +25,7 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
   }
 }
 
-export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
+async function handlePOST(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const { id: buildingId } = await context.params;
     const user = await getCurrentUser();
@@ -75,3 +76,5 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     return NextResponse.json({ ok: false, message: "Unable to register Owner Parking vehicle." }, { status: 500 });
   }
 }
+
+export const POST = withAuditRequest(handlePOST);

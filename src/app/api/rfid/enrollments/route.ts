@@ -1,3 +1,4 @@
+import { withAuditRequest } from "@/lib/audit-request";
 import { companyCardScope } from "@/lib/company-card-access";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
@@ -7,7 +8,7 @@ import { hasPermission } from "@/lib/permissions";
 
 const REGISTRATION_WINDOW_MS = 30_000;
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   try {
     const user = await rfidUser();
     const body = await request.json().catch(() => null);
@@ -62,3 +63,5 @@ export async function POST(request: Request) {
     return rfidApiError(error);
   }
 }
+
+export const POST = withAuditRequest(handlePOST);

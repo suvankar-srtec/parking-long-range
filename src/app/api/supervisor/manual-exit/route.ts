@@ -1,3 +1,4 @@
+import { withAuditRequest } from "@/lib/audit-request";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/session";
@@ -6,7 +7,7 @@ import { lockRfid, rfidApiError } from "@/lib/rfid-access";
 import { lockBuildingParking, ParkingError } from "@/lib/building-parking";
 import { isPrimarySuperAdmin } from "@/lib/super-admin-scope";
 import { manualExitTarget, completeManualExit } from "@/lib/manual-exit";
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   try {
     const user = await getCurrentUser();
     if (!user || !(user.role === "SUPER_ADMIN" || user.role === "BUILDING_ADMIN" && hasPermission(user, "building.approveManualExit") || user.role === "EMPLOYEE" && hasPermission(user, "supervisor.liveDashboard") && hasPermission(user, "supervisor.requestManualExit"))) throw new ParkingError("Manual exit is not available for this account.", 403);
@@ -39,3 +40,5 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, ...result });
   } catch (error) { return rfidApiError(error); }
 }
+
+export const POST = withAuditRequest(handlePOST);

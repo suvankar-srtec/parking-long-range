@@ -59,6 +59,15 @@ class NativeFallbackTests(unittest.TestCase):
         self.assertEqual(calls[-1][1]['CmdOK'], '1')
         self.assertTrue(calls[-1][2])
 
+    def test_stale_controller_packet_does_not_refresh_cloud_status(self):
+        gateway = self.gateway
+        gateway.native_heartbeat_fields({'Serial': '80M236', 'Key': '1'})
+        gateway.contact = utc(self.now - 60000)
+        calls = []
+        gateway.cloud = lambda *args: calls.append(args)
+        gateway.sync_native_memory_once()
+        self.assertEqual(calls, [])
+
     def test_memory_bridge_rejects_relay_commands_and_invalid_checksums(self):
         gateway = self.gateway
         gateway.native_heartbeat_fields({'Serial': '80M236', 'Key': '1'})

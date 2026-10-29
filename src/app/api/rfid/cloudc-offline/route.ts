@@ -1,3 +1,4 @@
+import { withAuditRequest } from "@/lib/audit-request";
 import { NextResponse } from "next/server";
 
 import { prisma } from "@/lib/prisma";
@@ -64,7 +65,7 @@ export async function GET(request: Request) {
 
 }
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
 
   try {
 
@@ -118,3 +119,5 @@ export async function POST(request: Request) {
 
 }
 
+
+export const POST = withAuditRequest(handlePOST);

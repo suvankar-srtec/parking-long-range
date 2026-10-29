@@ -1,3 +1,4 @@
+import { withAuditRequest } from "@/lib/audit-request";
 import { canCreateCompanyPeople } from "@/lib/employee-creation";
 import { isPrimarySuperAdmin } from "@/lib/super-admin-scope";
 import { hasPermission } from "@/lib/permissions";
@@ -8,7 +9,7 @@ import { reserveUserId, UserIdError } from "@/lib/user-id-reservations";
 import { prisma } from "@/lib/prisma";
 import { nextSupervisorUserId } from "@/lib/supervisor-user-id";
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   try {
     const user = await getCurrentUser();
     if (!user) return NextResponse.json({ ok: false, message: "Sign in to generate a User ID." }, { status: 403 });
@@ -63,3 +64,5 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, message: "Unable to generate a User ID. Please try again." }, { status: 500 });
   }
 }
+
+export const POST = withAuditRequest(handlePOST);

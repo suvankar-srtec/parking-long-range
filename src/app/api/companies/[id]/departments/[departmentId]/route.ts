@@ -1,3 +1,4 @@
+import { withAuditRequest } from "@/lib/audit-request";
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
@@ -20,7 +21,7 @@ async function canManageCompany(companyId: string) {
   return null;
 }
 
-export async function DELETE(_request: Request, context: { params: Promise<{ id: string; departmentId: string }> }) {
+async function handleDELETE(_request: Request, context: { params: Promise<{ id: string; departmentId: string }> }) {
   try {
     const { id: companyId, departmentId } = await context.params;
     const user = await canManageCompany(companyId);
@@ -45,3 +46,5 @@ export async function DELETE(_request: Request, context: { params: Promise<{ id:
     return NextResponse.json({ ok: false, message: "Unable to delete department." }, { status: 500 });
   }
 }
+
+export const DELETE = withAuditRequest(handleDELETE);

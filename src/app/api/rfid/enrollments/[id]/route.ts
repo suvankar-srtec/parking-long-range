@@ -1,3 +1,4 @@
+import { withAuditRequest } from "@/lib/audit-request";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { rfidUser, rfidApiError, lockRfid, RFID_TRANSACTION } from "@/lib/rfid-access";
@@ -12,7 +13,7 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
     return NextResponse.json({ ok: true, enrollment: { ...enrollment, status } }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) { return rfidApiError(error); }
 }
-export async function DELETE(_request: Request, context: { params: Promise<{ id: string }> }) {
+async function handleDELETE(_request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const user = await rfidUser();
     const { id } = await context.params;
@@ -23,3 +24,5 @@ export async function DELETE(_request: Request, context: { params: Promise<{ id:
     return NextResponse.json({ ok: true });
   } catch (error) { return rfidApiError(error); }
 }
+
+export const DELETE = withAuditRequest(handleDELETE);

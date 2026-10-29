@@ -1,3 +1,4 @@
+import { withAuditRequest } from "@/lib/audit-request";
 import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
@@ -22,7 +23,7 @@ function canEditEmployee(
   return false;
 }
 
-export async function PATCH(
+async function handlePATCH(
   request: Request,
   context: { params: Promise<{ id: string; employeeId: string }> },
 ) {
@@ -98,3 +99,5 @@ export async function PATCH(
     return NextResponse.json({ ok: false, message: "Unable to update employee." }, { status: 500 });
   }
 }
+
+export const PATCH = withAuditRequest(handlePATCH);

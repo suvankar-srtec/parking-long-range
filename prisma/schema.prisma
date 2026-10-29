@@ -452,3 +452,27 @@ model LocalAccessGateway {
   enabled Boolean @default(true)
   @@map("local_access_gateways")
 }
+
+// No relations: audit evidence survives deletion of the original account or entity.
+model AuditRecord {
+ id BigInt @id @default(autoincrement())
+ recordedAt DateTime @default(now()) @db.Timestamptz(6)
+ occurredAt DateTime @default(now()) @db.Timestamptz(6)
+ source String
+ category String
+ action String
+ entityType String?
+ entityId String?
+ buildingId String?
+ buildingName String?
+ companyName String?
+ superAdminId String?
+ actor String @default("System / device")
+ actorRole String?
+ result String
+ details Json @default("{}")
+ @@index([recordedAt(sort: Desc), id(sort: Desc)], map: "audit_records_time")
+ @@index([superAdminId, id(sort: Desc)], map: "audit_records_scope")
+ @@index([category, id(sort: Desc)], map: "audit_records_category")
+ @@map("audit_records")
+}

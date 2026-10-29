@@ -1,10 +1,11 @@
+import { withAuditRequest } from "@/lib/audit-request";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { notificationContext } from "@/lib/manual-exit-notifications";
 import { manualExitTarget, completeManualExit } from "@/lib/manual-exit";
 import { lockRfid, rfidApiError } from "@/lib/rfid-access";
 import { lockBuildingParking, ParkingError } from "@/lib/building-parking";
-export async function POST(_request: Request, context: { params: Promise<{ id: string }> }) {
+async function handlePOST(_request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const { user, where } = await notificationContext(); const { id } = await context.params;
     const result = await prisma.$transaction(async tx => {
@@ -25,3 +26,5 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
     return NextResponse.json({ ok: true, message: result });
   } catch (error) { return rfidApiError(error); }
 }
+
+export const POST = withAuditRequest(handlePOST);

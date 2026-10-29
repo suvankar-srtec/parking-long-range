@@ -1,3 +1,4 @@
+import { withAuditRequest } from "@/lib/audit-request";
 import { companyCardScope } from "@/lib/company-card-access";
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
@@ -5,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { rfidUser, rfidApiError, lockRfid, consumeCardEnrollment, RFID_TRANSACTION } from "@/lib/rfid-access";
 import { lockBuildingParking, ParkingError } from "@/lib/building-parking";
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   try {
     const user = await rfidUser();
     const body = await request.json().catch(() => null);
@@ -26,3 +27,5 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, message: "RFID card registered successfully." });
   } catch (error) { return rfidApiError(error); }
 }
+
+export const POST = withAuditRequest(handlePOST);

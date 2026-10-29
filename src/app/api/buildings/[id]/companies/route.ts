@@ -1,3 +1,4 @@
+import { withAuditRequest } from "@/lib/audit-request";
 import { isPrimarySuperAdmin } from "@/lib/super-admin-scope";
 import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
@@ -9,7 +10,7 @@ import { lockBuildingParking, ParkingError } from "@/lib/building-parking";
 import { MAX_PARKING } from "@/lib/parking";
 import { claimUserId, UserIdError } from "@/lib/user-id-reservations";
 
-export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
+async function handlePOST(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const { id: buildingId } = await context.params;
     const user = await getCurrentUser();
@@ -121,3 +122,5 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     return NextResponse.json({ ok: false, message: "Unable to create company." }, { status: 500 });
   }
 }
+
+export const POST = withAuditRequest(handlePOST);

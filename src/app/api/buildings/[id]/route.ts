@@ -1,3 +1,4 @@
+import { withAuditRequest } from "@/lib/audit-request";
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
@@ -7,7 +8,7 @@ import { hasPermission } from "@/lib/permissions";
 import { lockBuildingParking, ParkingError, updateBuildingParking } from "@/lib/building-parking";
 import { isPrimarySuperAdmin } from "@/lib/super-admin-scope";
 
-export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
+async function handlePATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const user = await getCurrentUser();
     if (!user || !["SUPER_ADMIN", "BUILDING_ADMIN"].includes(user.role)) {
@@ -150,6 +151,9 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
   }
 }
 
-export async function DELETE() {
+async function handleDELETE() {
   return NextResponse.json({ ok: false, message: "Buildings cannot be deleted. A Super Admin can disable the building instead." }, { status: 405, headers: { Allow: "PATCH" } });
 }
+
+export const PATCH = withAuditRequest(handlePATCH);
+export const DELETE = withAuditRequest(handleDELETE);

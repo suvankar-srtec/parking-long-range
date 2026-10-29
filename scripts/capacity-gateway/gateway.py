@@ -151,6 +151,7 @@ class Gateway:
         request=urllib.request.Request(self.config['cloud_base']+path,data=None if data is None else json.dumps(data).encode(),headers=headers)
         with urllib.request.urlopen(request,timeout=15) as response:return response.read()
     def native_heartbeat_fields(self,packet):
+        self.contact=utc()
         if not self.config.get('native_fallback'):return {}
         with self.native_lock:
             self.native_packet={key:str(packet[key]) for key in ('Serial','Key','IndexCmd','CmdOK') if key in packet}
@@ -161,7 +162,8 @@ class Gateway:
         return command
     def sync_native_memory_once(self):
         with self.native_lock:packet=dict(self.native_packet) if self.native_packet else None
-        if not packet:return
+        # Cached memory-sync packets are not proof of a live controller.
+        if not packet or not self.contact or not 0 <= time.time()*1000-millis(self.contact) <= 15000:return
         raw=self.cloud('/api/AcsDataApi/RequestStatus?'+urllib.parse.urlencode({'token':self.config['controller_token']}),packet,True).decode()
         response=json.loads(raw[5:] if raw.startswith('DATA=') else raw)
         command={}

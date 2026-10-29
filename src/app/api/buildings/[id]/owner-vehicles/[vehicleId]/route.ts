@@ -1,3 +1,4 @@
+import { withAuditRequest } from "@/lib/audit-request";
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
@@ -6,7 +7,7 @@ import { hasPermission } from "@/lib/permissions";
 import { ParkingError } from "@/lib/building-parking";
 import { lockRfid, RFID_TRANSACTION } from "@/lib/rfid-access";
 
-export async function DELETE(
+async function handleDELETE(
   _request: Request,
   context: { params: Promise<{ id: string; vehicleId: string }> },
 ) {
@@ -34,3 +35,5 @@ export async function DELETE(
     return NextResponse.json({ ok: false, message: "Unable to remove Owner Parking allocation." }, { status: 500 });
   }
 }
+
+export const DELETE = withAuditRequest(handleDELETE);

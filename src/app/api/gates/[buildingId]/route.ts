@@ -1,3 +1,4 @@
+import { withAuditRequest } from "@/lib/audit-request";
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
@@ -5,7 +6,7 @@ import { getCurrentUser } from "@/lib/session";
 import { hasPermission } from "@/lib/permissions";
 import { isPrimarySuperAdmin } from "@/lib/super-admin-scope";
 
-export async function POST(
+async function handlePOST(
   _request: Request,
   context: { params: Promise<{ buildingId: string }> },
 ) {
@@ -54,3 +55,5 @@ export async function POST(
   revalidatePath("/access-control/gate-details");
   return NextResponse.json({ ok: true, message: `Gate ${gateNumber} added.`, gate }, { status: 201 });
 }
+
+export const POST = withAuditRequest(handlePOST);

@@ -1,3 +1,4 @@
+import { withAuditRequest } from "@/lib/audit-request";
 import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
@@ -8,7 +9,7 @@ import { sanitizePermissions } from "@/lib/permissions";
 import { createBuildingWithAccount } from "@/lib/create-building";
 import { UserIdError } from "@/lib/user-id-reservations";
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   try {
     const admin = await requireSuperAdmin();
     if (!admin) {
@@ -62,3 +63,5 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, message: "Unable to create the building. Please try again." }, { status: 500 });
   }
 }
+
+export const POST = withAuditRequest(handlePOST);

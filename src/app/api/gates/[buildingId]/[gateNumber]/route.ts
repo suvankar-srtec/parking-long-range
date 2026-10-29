@@ -1,3 +1,4 @@
+import { withAuditRequest } from "@/lib/audit-request";
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
@@ -34,7 +35,7 @@ async function validateReader(buildingId: string, readerId: string | null, label
   return null;
 }
 
-export async function PATCH(request: Request, context: { params: Promise<{ buildingId: string; gateNumber: string }> }) {
+async function handlePATCH(request: Request, context: { params: Promise<{ buildingId: string; gateNumber: string }> }) {
   const user = await getCurrentUser();
   if (!user || !["SUPER_ADMIN", "BUILDING_ADMIN"].includes(user.role)) {
     return NextResponse.json({ ok: false, message: "Super Admin or Building Admin access required." }, { status: 403 });
@@ -100,7 +101,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ build
   return NextResponse.json({ ok: true, message: requestedReaderIds.length ? `Gate ${gateNumber} reader allocation updated.` : `Gate ${gateNumber} updated successfully.`, gate: { ...gate, direction, entryReaderId, exitReaderId } });
 }
 
-export async function DELETE(_request: Request, context: { params: Promise<{ buildingId: string; gateNumber: string }> }) {
+async function handleDELETE(_request: Request, context: { params: Promise<{ buildingId: string; gateNumber: string }> }) {
   const user = await getCurrentUser();
   if (!user || !["SUPER_ADMIN", "BUILDING_ADMIN"].includes(user.role)) {
     return NextResponse.json({ ok: false, message: "Super Admin or Building Admin access required." }, { status: 403 });
@@ -120,3 +121,6 @@ export async function DELETE(_request: Request, context: { params: Promise<{ bui
   revalidatePath("/access-control/gate-details");
   return NextResponse.json({ ok: true, message: `Gate ${gateNumber} removed. Its reader allocation is now available again.` });
 }
+
+export const PATCH = withAuditRequest(handlePATCH);
+export const DELETE = withAuditRequest(handleDELETE);

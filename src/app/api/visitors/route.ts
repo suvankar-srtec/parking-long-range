@@ -1,3 +1,4 @@
+import { withAuditRequest } from "@/lib/audit-request";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/permissions";
@@ -12,7 +13,7 @@ function validEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   try {
     const user = await getCurrentUser();
     if (!user) {
@@ -138,3 +139,5 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, message: "Unable to save visitor details. Please try again." }, { status: 500 });
   }
 }
+
+export const POST = withAuditRequest(handlePOST);

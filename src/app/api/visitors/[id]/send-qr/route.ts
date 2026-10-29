@@ -1,10 +1,11 @@
+import { withAuditRequest } from "@/lib/audit-request";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/permissions";
 import { getCurrentUser } from "@/lib/session";
 import { sendVisitorQrEmail } from "@/lib/visitor-qr-mail";
 
-export async function POST(
+async function handlePOST(
   _request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
@@ -74,3 +75,5 @@ export async function POST(
     return NextResponse.json({ ok: false, message }, { status: 500 });
   }
 }
+
+export const POST = withAuditRequest(handlePOST);

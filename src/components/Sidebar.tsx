@@ -365,6 +365,10 @@ export default function Sidebar({
       >
         <NavRow icon="report" label="Reports" />
       </Link> : null}
+      {isSuperAdmin ? <Link
+        className={`sidebar-nav-link${pathname === "/audit-report" ? " is-active" : ""}`}
+        href="/audit-report" aria-current={pathname === "/audit-report" ? "page" : undefined}
+      ><NavRow icon="shield" label="Audit Report" /></Link> : null}
     </nav>
 
     {showReaderStatus

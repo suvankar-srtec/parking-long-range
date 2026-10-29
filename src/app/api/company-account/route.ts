@@ -1,9 +1,10 @@
+import { withAuditRequest } from "@/lib/audit-request";
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/session";
 
-export async function PATCH(request: Request) {
+async function handlePATCH(request: Request) {
   try {
     const user = await getCurrentUser();
     if (!user || (user.role !== "COMPANY_ADMIN" && user.role !== "BUILDING_OWNER") || !user.companyId) {
@@ -48,3 +49,5 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ ok: false, message: "Unable to update company password." }, { status: 500 });
   }
 }
+
+export const PATCH = withAuditRequest(handlePATCH);

@@ -1,3 +1,4 @@
+import { withAuditRequest } from "@/lib/audit-request";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/session";
@@ -21,7 +22,7 @@ export async function GET() {
   return NextResponse.json({ ok: true, admins });
 }
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   const creator = await requireRootSuperAdmin();
   if (!creator) return NextResponse.json({ ok: false, message: "Only the primary Super Admin can create another Super Admin." }, { status: 403 });
 
@@ -60,7 +61,7 @@ export async function POST(request: Request) {
   return NextResponse.json({ ok: true, message: `Super Admin created successfully. User ID: ${result.userId}.`, admin: result }, { status: 201 });
 }
 
-export async function PATCH(request: Request) {
+async function handlePATCH(request: Request) {
   const currentUser = await requireRootSuperAdmin();
   if (!currentUser) {
     return NextResponse.json({ ok: false, message: "Only the primary Super Admin can edit another Super Admin." }, { status: 403 });
@@ -104,7 +105,7 @@ export async function PATCH(request: Request) {
   });
 }
 
-export async function DELETE(request: Request) {
+async function handleDELETE(request: Request) {
   const currentUser = await requireRootSuperAdmin();
   if (!currentUser) {
     return NextResponse.json({ ok: false, message: "Only the primary Super Admin can remove another Super Admin." }, { status: 403 });
@@ -147,3 +148,7 @@ export async function DELETE(request: Request) {
 
   return NextResponse.json({ ok: true, message: `Super Admin ${target.userId} removed successfully.` });
 }
+
+export const POST = withAuditRequest(handlePOST);
+export const PATCH = withAuditRequest(handlePATCH);
+export const DELETE = withAuditRequest(handleDELETE);

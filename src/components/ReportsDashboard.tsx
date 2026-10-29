@@ -336,14 +336,20 @@ export default function ReportsDashboard({
     });
   }
 
-  function downloadExcel() {
+  async function recordExport(format: "Excel" | "PDF") {
+    const response=await fetch("/api/reports/export-log",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({format})});
+    if(!response.ok)throw new Error("Audit unavailable");
+  }
+  async function downloadExcel() {
+    try { await recordExport("Excel"); } catch { window.alert("Unable to record report export. Please try again."); return; }
     const headers = visibleColumns.map((column) => column.label);
     const body = filtered.map((row) => visibleColumns.map((column) => column.value(row)));
     const html = `<!doctype html><html><head><meta charset="utf-8"></head><body><table><tr>${headers.map((header) => `<th>${htmlEscape(header)}</th>`).join("")}</tr>${body.map((values) => `<tr>${values.map((value) => `<td>${htmlEscape(value)}</td>`).join("")}</tr>`).join("")}</table></body></html>`;
     downloadBlob(new Blob([html], { type: "application/vnd.ms-excel;charset=utf-8" }), `parking-report-${new Date().toISOString().slice(0, 10)}.xls`);
   }
 
-  function downloadPdf() {
+  async function downloadPdf() {
+    try { await recordExport("PDF"); } catch { window.alert("Unable to record report export. Please try again."); return; }
     const headerLine = visibleColumns
       .map((column) => fitPdfCell(column.label.toUpperCase(), column.pdfWidth))
       .join(" | ");

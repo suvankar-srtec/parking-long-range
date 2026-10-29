@@ -1,3 +1,4 @@
+import { withAuditRequest } from "@/lib/audit-request";
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
@@ -5,7 +6,7 @@ import { getCurrentUser } from "@/lib/session";
 import { hasPermission, sanitizePermissions } from "@/lib/permissions";
 import { nextSupervisorUserId } from "@/lib/supervisor-user-id";
 
-export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
+async function handlePOST(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const { id: buildingId } = await context.params;
     const user = await getCurrentUser();
@@ -64,3 +65,5 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     return NextResponse.json({ ok: false, message: "Unable to save supervisor account." }, { status: 500 });
   }
 }
+
+export const POST = withAuditRequest(handlePOST);

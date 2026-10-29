@@ -1,3 +1,4 @@
+import { withAuditRequest } from "@/lib/audit-request";
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
@@ -12,7 +13,7 @@ function validEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
-export async function PATCH(
+async function handlePATCH(
   request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
@@ -109,3 +110,5 @@ export async function PATCH(
     return NextResponse.json({ ok: false, message: "Unable to update the visitor details. Please try again." }, { status: 500 });
   }
 }
+
+export const PATCH = withAuditRequest(handlePATCH);

@@ -1,3 +1,4 @@
+import { withAuditRequest } from "@/lib/audit-request";
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
@@ -6,7 +7,7 @@ import { hasPermission } from "@/lib/permissions";
 import { lockRfid, RFID_TRANSACTION } from "@/lib/rfid-access";
 import { ParkingError } from "@/lib/building-parking";
 
-export async function PATCH(
+async function handlePATCH(
   request: Request,
   context: { params: Promise<{ type: string; id: string }> },
 ) {
@@ -104,3 +105,5 @@ export async function PATCH(
     return NextResponse.json({ ok: false, message: "Unable to update RFID card status." }, { status: 500 });
   }
 }
+
+export const PATCH = withAuditRequest(handlePATCH);

@@ -1,3 +1,4 @@
+import { withAuditRequest } from "@/lib/audit-request";
 import { companyCardScope } from "@/lib/company-card-access";
 import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
@@ -10,7 +11,7 @@ import { consumeCardEnrollment, lockRfid, RFID_TRANSACTION } from "@/lib/rfid-ac
 
 const vehicleTypes = ["Two wheeler", "Four wheeler"];
 
-export async function POST(request: Request, context: { params: Promise<{ id: string; employeeId: string }> }) {
+async function handlePOST(request: Request, context: { params: Promise<{ id: string; employeeId: string }> }) {
   try {
     const { id: companyId, employeeId } = await context.params;
     const user = await getCurrentUser();
@@ -70,3 +71,5 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     return NextResponse.json({ ok: false, message: "Unable to register vehicle." }, { status: 500 });
   }
 }
+
+export const POST = withAuditRequest(handlePOST);

@@ -1,7 +1,8 @@
+import { withAuditRequest } from "@/lib/audit-request";
 import { NextResponse } from "next/server";
 import { SESSION_COOKIE } from "@/lib/session";
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   const response = request.headers.get("accept")?.includes("application/json")
     ? NextResponse.json({ ok: true, message: "Signed out successfully." })
     : NextResponse.redirect(new URL("/", request.url), 303);
@@ -11,3 +12,5 @@ export async function POST(request: Request) {
   });
   return response;
 }
+
+export const POST = withAuditRequest(handlePOST);
