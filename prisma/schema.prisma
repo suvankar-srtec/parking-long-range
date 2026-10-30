@@ -474,5 +474,6 @@ model AuditRecord {
  @@index([recordedAt(sort: Desc), id(sort: Desc)], map: "audit_records_time")
  @@index([superAdminId, id(sort: Desc)], map: "audit_records_scope")
  @@index([category, id(sort: Desc)], map: "audit_records_category")
+ @@index([entityType, entityId], map: "audit_records_entity")
  @@map("audit_records")
 }

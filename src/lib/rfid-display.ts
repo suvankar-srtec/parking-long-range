@@ -3,6 +3,8 @@ export function scanResultMessage(message: string) {
   if (normalized === "owner parking allocation is full") return "Allocation full";
   if (normalized === "rfid card is not registered") return "Not Register";
   if (normalized === "duplicate entry: vehicle is already inside. exit before another entry") return "Exit before Entry";
+  if(normalized === "rfid card blocked by building admin") return "RFID card blocked by Admin.";
+  if(normalized === "rfid card unblocked by building admin") return "RFID card unblocked by Admin.";
   return message;
 }
 

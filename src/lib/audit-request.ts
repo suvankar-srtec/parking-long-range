@@ -1,3 +1,4 @@
+import { auditRequestContext } from "@/lib/audit-request-context";
 import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser, verifySessionToken } from "@/lib/session";
@@ -8,6 +9,7 @@ export function withAuditRequest<A extends unknown[]>(handler: (...args: A) => P
   const request=args[0] instanceof Request?args[0]:null;
   const path=request?new URL(request.url).pathname:"Unknown endpoint";
   const requestId=randomUUID();
+  const auditContext={relatedEventId:null as string|null};
   let attemptedUserId: string|null=null, exportFormat: string|null=null;
   if(request && ["/api/login","/api/reports/export-log"].includes(path)) {
    try { const body=await request.clone().json();
@@ -20,7 +22,7 @@ export function withAuditRequest<A extends unknown[]>(handler: (...args: A) => P
    let buildingName:string|null=null, superAdminId:string|null=user?.role==="SUPER_ADMIN"?user.id:null;
    if(user?.buildingId) {const building=await prisma.building.findUnique({where:{id:user.buildingId},select:{name:true,superAdminId:true}});buildingName=building?.name??null;superAdminId=building?.superAdminId??null;}
    const actor=user?.userId??attemptedUserId??"Unauthenticated";
-   const details=JSON.stringify({requestId,method:request?.method,path,status,exportFormat,
+   const details=JSON.stringify({requestId,relatedEventId:auditContext.relatedEventId,method:request?.method,path,status,exportFormat,
     ip:request?.headers.get("x-forwarded-for")?.split(",")[0]?.trim().slice(0,100)??null,
     userAgent:request?.headers.get("user-agent")?.slice(0,300)??null});
    const category=path.includes("login")||path.includes("logout")?"Login and security":path.includes("export")?"Report exports":"Account actions";
@@ -30,7 +32,7 @@ export function withAuditRequest<A extends unknown[]>(handler: (...args: A) => P
   // Intent survives a terminated request; mutation never starts without an audit record.
   await write("Started");
   let response:Response;
-  try {response=await handler(...args);}catch(error){await write("Failed",500);throw error;}
+  try {response=await auditRequestContext.run(auditContext,()=>handler(...args));}catch(error){await write("Failed",500);throw error;}
   if(path==="/api/login" && response.ok) {
    const cookie=response.headers.get("set-cookie")?.match(/parking_session=([^;]+)/)?.[1];
    const session=verifySessionToken(cookie?decodeURIComponent(cookie):null);

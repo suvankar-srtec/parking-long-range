@@ -1,3 +1,4 @@
+import { linkAuditEvent } from "@/lib/audit-request-context";
 import { withAuditRequest } from "@/lib/audit-request";
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
@@ -45,7 +46,7 @@ async function handlePATCH(
           select: { id: true, rfidBlocked: true },
         });
 
-        await tx.rfidEvent.create({
+        const auditEvent = await tx.rfidEvent.create({
           data: {
             buildingId: user.buildingId!,
             companyId: (await tx.vehicle.findUniqueOrThrow({ where: { id }, select: { companyId: true } })).companyId,
@@ -54,11 +55,11 @@ async function handlePATCH(
             cardNo: vehicle.rfidCardNo,
             action: blocked ? "BLOCK" : "UNBLOCK",
             code: "0000",
-            message: blocked ? "RFID card blocked by Building Admin." : "RFID card unblocked by Building Admin.",
+            message: blocked ? "RFID card blocked by Admin." : "RFID card unblocked by Admin.",
           },
         });
 
-        return { id: updated.id, blocked: updated.rfidBlocked };
+        return { id: updated.id, blocked: updated.rfidBlocked, auditEventId:auditEvent.id };
       }
 
       const vehicle = await tx.buildingOwnerVehicle.findFirst({
@@ -75,7 +76,7 @@ async function handlePATCH(
         select: { id: true, rfidBlocked: true },
       });
 
-      await tx.rfidEvent.create({
+      const auditEvent = await tx.rfidEvent.create({
         data: {
           buildingId: user.buildingId!,
           ownerVehicleId: id,
@@ -83,19 +84,20 @@ async function handlePATCH(
           cardNo: vehicle.rfidCardNo,
           action: blocked ? "BLOCK" : "UNBLOCK",
           code: "0000",
-          message: blocked ? "RFID card blocked by Building Admin." : "RFID card unblocked by Building Admin.",
+          message: blocked ? "RFID card blocked by Admin." : "RFID card unblocked by Admin.",
         },
       });
 
-      return { id: updated.id, blocked: updated.rfidBlocked };
+      return { id: updated.id, blocked: updated.rfidBlocked, auditEventId:auditEvent.id };
     }, RFID_TRANSACTION);
 
+    linkAuditEvent(result.auditEventId);
     revalidatePath("/access-control/card-block");
     revalidatePath("/access-control/activity");
     return NextResponse.json({
       ok: true,
       message: blocked ? "RFID card blocked successfully." : "RFID card unblocked successfully.",
-      card: result,
+      card: {id:result.id,blocked:result.blocked},
     });
   } catch (error) {
     if (error instanceof ParkingError) {

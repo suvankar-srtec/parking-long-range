@@ -1,0 +1,45 @@
+// Only predefined action names are accepted; never send arbitrary DOM text or field values.
+export const interfaceActions = {
+ updatePassword:"Clicked Update password",updateCredentials:"Clicked Update credentials",editAllocation:"Clicked Edit allocation",discardChanges:"Clicked Discard changes",openBuilding:"Clicked Open building",addGate:"Clicked Add gate",removeGate:"Clicked Remove gate",increaseDepartments:"Clicked Increase department limit",decreaseDepartments:"Clicked Decrease department limit",showCompanyDetails:"Clicked Show company details",hideCompanyDetails:"Clicked Hide company details",adminCredentials:"Clicked Admin credentials",createCompany:"Clicked Create company",createBuilding:"Clicked Create building",submit:"Clicked Submit form",menu:"Opened a menu",button:"Clicked a button",link:"Opened a link",field:"Focused a field",checkbox:"Clicked a checkbox",radio:"Clicked a radio option",select:"Opened a selection",selection:"Changed a selection",
+ dashboard:"Opened Dashboard",access:"Opened Access Control",settings:"Opened Settings",notifications:"Opened Notifications",reports:"Opened Reports",audit:"Opened Audit Report",offline:"Opened Offline Sync",gates:"Opened Gate Details",readers:"Opened Device / Reader",register:"Opened Register cards",monitor:"Opened Real Time Monitor",visitor:"Opened Visitor Form",employees:"Opened Employee parking",parking:"Opened Parking allocation",building:"Opened My building",company:"Opened My company",buildings:"Opened Buildings",supervisors:"Opened Supervisor",superadmins:"Opened Create Super Admin",
+ addEmployee:"Clicked Add Employee",addVehicle:"Clicked Add vehicle",newCompany:"Clicked New company",addReader:"Clicked Add reader",configure:"Clicked Configure",save:"Clicked Save",saveChanges:"Clicked Save changes",saveReader:"Clicked Save reader",saveRegistration:"Clicked Save registration",saveAccess:"Clicked Save access settings",update:"Clicked Update settings",remove:"Clicked Remove",removeSelected:"Clicked Remove selected",cancel:"Clicked Cancel",close:"Clicked Close",edit:"Clicked Edit",viewActive:"Clicked View active cards",signout:"Clicked Sign out",next:"Clicked Next",back:"Clicked Back",continue:"Clicked Add & Continue",excel:"Clicked Excel export",pdf:"Clicked PDF export",refresh:"Clicked Refresh",filter:"Clicked Filter",approve:"Clicked Approve",reject:"Clicked Reject",enable:"Clicked Enable",disable:"Clicked Disable",block:"Clicked Block",unblock:"Clicked Unblock",registerCard:"Clicked Register card",selectAll:"Clicked Select all",manageAllocations:"Clicked Manage allocations",manageSupervisor:"Clicked Manage supervisor",configurePurpose:"Clicked Configure purpose",removeReader:"Clicked Remove reader",limit:"Opened Limit enable/disable",antiPassback:"Opened Anti-passback",cardBlock:"Opened Card Block",columns:"Clicked Columns",clearFilters:"Clicked Clear filters",showPassword:"Clicked Show password",hidePassword:"Clicked Hide password"
+} as const;
+export type InterfaceAction = keyof typeof interfaceActions;
+const routes = new Set(["dashboard","access-control","settings","notifications","reports","audit-report","offline-sync","super-admins","visitor-form","account","activity","gate-details","reader-details","register-cards","card-block","limits","anti-passback","buildings","company-parking","employee-parking","parking-allocation","supervisor"]);
+export function auditPage(path:string) {
+ const pathname=path.split(/[?#]/,1)[0];
+ return "/"+pathname.split("/").filter(Boolean).slice(0,6).map(part=>routes.has(part)?part:"[item]").join("/");
+}
+export const interfaceLabels: Record<string,InterfaceAction> = {
+ "update password":"updatePassword","update credentials":"updateCredentials","edit allocation":"editAllocation","discard changes":"discardChanges","open building":"openBuilding","add gate":"addGate","remove gate":"removeGate","increase department limit":"increaseDepartments","decrease department limit":"decreaseDepartments","admin":"adminCredentials","create company":"createCompany","create building":"createBuilding",dashboard:"dashboard","access control":"access",settings:"settings",notifications:"notifications",reports:"reports","audit report":"audit","offline sync":"offline","gate details":"gates","device / reader":"readers","register cards":"register","real time monitor":"monitor","visitor form":"visitor","employee parking":"employees","parking allocation":"parking","my building":"building","my company":"company",buildings:"buildings",supervisor:"supervisors","create super admin":"superadmins",
+ "add employee":"addEmployee","add vehicle":"addVehicle","new company":"newCompany","add reader":"addReader",configure:"configure",save:"save","save changes":"saveChanges","save reader":"saveReader","save registration":"saveRegistration","save access settings":"saveAccess","update settings":"update",remove:"remove","remove selected":"removeSelected",cancel:"cancel",close:"close",edit:"edit","view active cards":"viewActive","sign out":"signout",next:"next",back:"back","add & continue":"continue",excel:"excel",pdf:"pdf",refresh:"refresh",filter:"filter",approve:"approve",reject:"reject",enable:"enable",disable:"disable",block:"block",unblock:"unblock","register card":"registerCard","select all":"selectAll","manage allocations":"manageAllocations","manage supervisor":"manageSupervisor","configure purpose":"configurePurpose","remove reader":"removeReader","limit enable/disable":"limit","anti-passback":"antiPassback","card block":"cardBlock",columns:"columns","clear filters":"clearFilters","show password":"showPassword","hide password":"hidePassword"
+};
+
+// Readable navigation context for both retained and newly captured interactions.
+export function auditMenu(path:string,role:string|null=null):string {
+ const page=auditPage(path);
+ const settings:Record<string,string>={"/settings/limits":"Settings > Limit enable/disable","/settings/anti-passback":"Settings > Anti-passback"};
+ if(settings[page])return settings[page];
+ if(page==="/access-control"||page==="/access-control/reader-details")return "Access Control > Device / Reader";
+ const access:Record<string,string>={"gate-details":"Gate Details","register-cards":"Register cards","activity":"Real Time Monitor","card-block":"Card Block"};
+ if(page.startsWith("/access-control/")){const section=page.split("/")[2];return access[section]?"Access Control > "+access[section]:"Access Control";}
+ if(page.startsWith("/dashboard/buildings/"))return "Dashboard > Buildings";
+ if(page==="/dashboard/buildings")return "Dashboard > Buildings";
+ const dashboard:Record<string,string>={"company-parking":"Company parking","employee-parking":"Employee parking","parking-allocation":"Parking allocation",supervisor:"Supervisor"};
+ if(page.startsWith("/dashboard/")){const section=page.split("/")[2];return dashboard[section]?"Dashboard > "+dashboard[section]:"Dashboard";}
+ if(page==="/dashboard")return "Dashboard > "+(role==="SUPER_ADMIN"?"Buildings":role==="BUILDING_ADMIN"?"My building":role==="EMPLOYEE"?"Real Time Monitor":"My company");
+ const menus:Record<string,string>={"/settings":"Settings","/notifications":"Notifications","/reports":"Reports","/audit-report":"Audit Report","/offline-sync":"Offline Sync","/super-admins":"Dashboard > Create Super Admin","/visitor-form":"Visitor Form","/account":"Account"};
+ return menus[page]||"Application";
+}
+export function interactionMenu(action:string,page:string,role:string|null=null):string {
+ const destinations:Record<string,string>={dashboard:"/dashboard",access:"/access-control",settings:"/settings",notifications:"/notifications",reports:"/reports",audit:"/audit-report",offline:"/offline-sync",gates:"/access-control/gate-details",readers:"/access-control",register:"/access-control/register-cards",monitor:"/access-control/activity",visitor:"/visitor-form",employees:"/dashboard/employee-parking",parking:"/dashboard/parking-allocation",building:"/dashboard",company:"/dashboard",buildings:"/dashboard/buildings",supervisors:"/dashboard/supervisor",superadmins:"/super-admins",limit:"/settings/limits",antiPassback:"/settings/anti-passback",cardBlock:"/access-control/card-block"};
+ const code=Object.entries(interfaceActions).find(([,name])=>name===action)?.[0];
+ return auditMenu(code&&destinations[code]?destinations[code]:page,role).replaceAll(" > "," \u203a ");
+}
+
+export function interactionDescription(action:string,page:string,role:string|null=null):string {
+ const menu=interactionMenu(action,page,role).replaceAll(" \u203a "," > ");
+ const generic:Record<string,string>={"Clicked a button":"Action not recorded","Opened a menu":"Open menu","Opened a link":"Open link","Focused a field":"Focus field","Clicked a checkbox":"Toggle checkbox","Clicked a radio option":"Select option","Opened a selection":"Open selection","Changed a selection":"Change selection"};
+ const taken=generic[action]||(action.startsWith("Clicked ")?action.slice(8):action.startsWith("Opened ")?"Open "+action.slice(7):action);
+ return "Click > "+menu+" > "+taken;
+}

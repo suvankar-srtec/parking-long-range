@@ -22,3 +22,18 @@ This protects records against application operations, not a database owner who c
 
 * `node --test tests/audit-report.test.cjs`: rollback-only database fixtures verify redaction, atomic before/after, deletion evidence, trigger coverage and update/delete/truncate rejection.
 * `node tests/audit-report.browser.cjs`: requires localhost:3000; checks authentication, role/scope restrictions, real rows, navigation, dialog/Escape, search, audited CSV download and mobile layout. It does not alter parking data.
+
+## Summary-only display
+The report and CSV return summary fields only. The Details column and popup are removed. Before/after snapshots remain in append-only storage but are not included in report API responses or CSV downloads.
+
+## Interaction records
+Started intents remain in immutable storage but are excluded from the report and CSV. Authenticated interface clicks are recorded separately as Interface activity, with predefined action labels, account, role, scoped building and a normalized page. Menu/button activations, checkbox/radio clicks, input focus clicks and select changes are supported. Typed values, arbitrary DOM labels, target URLs/query strings, personal entity IDs and passwords are never sent by the tracker. Login outcomes remain covered by login auditing. Click records describe client-reported interactions; they do not prove a database change or successful authorization. Delivery requires the browser and server to be available; clicks are batched and retried in memory, with a beacon on leaving the page. Duplicate event IDs are rejected by a unique index.
+
+Interaction rows display the category Activity, including retained Interface activity records. Click descriptions include a readable menu/submenu path; navigation clicks use their destination menu, and other controls use the originating screen. Internal route placeholders are not displayed.
+
+Click descriptions use `Click > Menu > Submenu > Action`, for example `Click > Settings > Anti-passback > Save access settings`. A click describes the requested action, not proof of a successful save; the account action outcome is recorded separately. Older generic button records end with Action not recorded because the original button name was not captured.
+
+## Card block/unblock grouping
+Successful account actions and their corresponding BLOCK/UNBLOCK database event display as one Card management row with the acting Admin and outcome. New requests pass the exact event ID via a request-local context. Retained records are paired only when the same card entity and Started/completion request window yield a one-to-one match. Ambiguous or failed requests remain separate. Matching rfidBlocked-only database updates in that transaction are hidden from presentation; unrelated updates are retained. Original rows remain append-only and unchanged. Wording is normalized to Admin in displayed historical messages.
+
+The audit list refreshes its data silently every 10 seconds, preserving the page and scroll position. Concurrent refreshes do not overlap. Combined card block/unblock descriptions include the recorded RFID card number.

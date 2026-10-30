@@ -1,3 +1,4 @@
+import AuditInteractionTracker from "@/components/AuditInteractionTracker";
 import type { Metadata } from "next";
 import FeedbackProvider from "@/components/FeedbackProvider";
 import "./globals.css";
@@ -13,5 +14,5 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="en"><body suppressHydrationWarning><FeedbackProvider>{children}</FeedbackProvider></body></html>;
+  return <html lang="en"><body suppressHydrationWarning><FeedbackProvider><AuditInteractionTracker />{children}</FeedbackProvider></body></html>;
 }
